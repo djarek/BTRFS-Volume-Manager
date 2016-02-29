@@ -30,3 +30,11 @@
 
 # Debug files
 *.dSYM/
+
+# Build directory
+build
+
+#KDE crap
+.directory
+*.kdev4
+.kdev4
