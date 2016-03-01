@@ -14,8 +14,8 @@ int main() {
 		printf("Error when creating snapshot: %s\n", strerror(-ret));
 	}
 
-	//if ((ret = btrfs_delete_subvol(subvol_path))) {
-	//	printf("Error when deleting subvol: %s\n", strerror(-ret));
-	//}
+	if ((ret = btrfs_delete_subvol(subvol_path))) {
+		printf("Error when deleting subvol: %s\n", strerror(-ret));
+	}
 	return 0;
 }
