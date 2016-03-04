@@ -3,7 +3,7 @@ package wsserver
 import (
 	"time"
 
-	"github.com/BTRFS-Volume-Manager/common/dtos"
+	"github.com/djarek/BTRFS-Volume-Manager/common/dtos"
 
 	"log"
 
