@@ -22,7 +22,7 @@ type ConnectionID uint64
 //ConnectionManager is a thread safe websocket connection & session manager
 type ConnectionManager struct {
 	connections map[ConnectionID]*Connection
-	mtx         sync.Mutex
+	mtx         sync.RWMutex
 	nextCID     ConnectionID
 
 	marshaller    dtos.WebSocketMessageMarshaller
