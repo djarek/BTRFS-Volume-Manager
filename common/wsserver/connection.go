@@ -1,27 +1,18 @@
 package wsserver
 
 import (
+	"log"
 	"time"
 
 	"github.com/djarek/BTRFS-Volume-Manager/common/dtos"
-
-	"log"
-
 	"github.com/gorilla/websocket"
 )
 
 const (
-	pongTimeout               = 60 * time.Second
+	pongTimeout               = 6 * time.Second
 	pingInterval              = (pongTimeout * 9) / 10
 	writeTimeout              = 10 * time.Second
 	authenticationReadTimeout = writeTimeout
-)
-
-var (
-	upgrader = websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
 )
 
 //SendCallback is the signature of the function that is called when an async
@@ -41,16 +32,17 @@ type sendTask struct {
 
 //Connection wraps the websocket connection
 type Connection struct {
-	wsConnection  *websocket.Conn
-	authenticated bool
-	marshaller    dtos.WebSocketMessageMarshaller
-	parser        RecvMessageParser
+	wsConnection    *websocket.Conn
+	authenticated   bool
+	marshaller      dtos.WebSocketMessageMarshaller
+	parser          RecvMessageParser
+	onCloseCallback func()
+	pingTicker      *time.Ticker
 
 	writeChannel chan sendTask
 }
 
-//NewConnection constructs a valid empty Connection object
-func NewConnection(wsConnection *websocket.Conn, marshaller dtos.WebSocketMessageMarshaller, parser RecvMessageParser) *Connection {
+func newConnection(wsConnection *websocket.Conn, marshaller dtos.WebSocketMessageMarshaller, parser RecvMessageParser) *Connection {
 	return &Connection{
 		wsConnection:  wsConnection,
 		authenticated: false,
@@ -58,13 +50,16 @@ func NewConnection(wsConnection *websocket.Conn, marshaller dtos.WebSocketMessag
 		parser:        parser,
 
 		writeChannel: make(chan sendTask)}
+}
 
+func (c *Connection) registerOnCloseCallback(cb func()) {
+	c.onCloseCallback = cb
 }
 
 //Authenticate performs authentication of the connection using the supplied authenticator.
 //It returns nil when the authentication is successful and the connection is ready to be
 //served.
-func (c *Connection) Authenticate(authenticator WebSocketAuthenticator) (err error) {
+func (c *Connection) authenticate(authenticator WebSocketAuthenticator) (err error) {
 	webSocketMsg := authenticator.GetChallenge(c.wsConnection.RemoteAddr())
 	payload, err := c.marshaller.Marshall(webSocketMsg)
 
@@ -108,17 +103,18 @@ func (c *Connection) Serve() {
 	if !c.authenticated {
 		log.Panicln("Serve called without valid authentication")
 	}
+
 	go c.writerLoop()
 	c.readerLoop()
 }
 
 func (c *Connection) writerLoop() {
-	pingTicker := time.NewTicker(pingInterval)
+	c.pingTicker = time.NewTicker(pingInterval)
 	defer c.Close()
 
 	for {
 		select {
-		case <-pingTicker.C:
+		case <-c.pingTicker.C:
 			err := c.internalWrite(websocket.PingMessage, []byte{})
 			if err != nil {
 				log.Println("Error when sending websocket ping: " + err.Error())
@@ -169,22 +165,25 @@ func (c *Connection) readerLoop() {
 //Close closes the underlying connection and does the necessary cleanup
 //like removing the connection from the connection manager
 func (c *Connection) Close() error {
-	if c.wsConnection != nil {
-		return c.wsConnection.Close()
+	if c.pingTicker != nil {
+		c.pingTicker.Stop()
 	}
-	return nil
+	if c.onCloseCallback != nil {
+		c.onCloseCallback()
+	}
+	return c.wsConnection.Close()
 }
 
 //SendAsync sends a WebSocketMessage asynchronously and returns immediately if an
 //error is encountered or the message write has been enqueued. If an error is
 //encountered during the network transfer, the error is passed to the callback
 func (c *Connection) SendAsync(msg *dtos.WebSocketMessage, callback SendCallback) error {
-	websocketMsgBytes, err := c.marshaller.Marshall(msg)
+	webSocketMsgBytes, err := c.marshaller.Marshall(msg)
 	if err != nil {
 		log.Println("Error when marshalling WebSocketMessage: " + err.Error())
 		return err
 	}
 
-	c.writeChannel <- sendTask{callback, websocketMsgBytes}
+	c.writeChannel <- sendTask{callback, webSocketMsgBytes}
 	return nil
 }
