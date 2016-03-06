@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/djarek/BTRFS-Volume-Manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/gorilla/websocket"
 )
 

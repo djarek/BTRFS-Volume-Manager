@@ -5,8 +5,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/djarek/BTRFS-Volume-Manager/common/dtos"
-	"github.com/djarek/BTRFS-Volume-Manager/common/wsserver"
+	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/wsserver"
 )
 
 type testMarshaller struct {
