@@ -17,5 +17,14 @@ int main() {
 	if ((ret = btrfs_delete_subvol(subvol_path))) {
 		printf("Error when deleting subvol: %s\n", strerror(-ret));
 	}
+
+	struct block_devices_array arr;
+	ret = get_devices(&arr);
+
+	for (int i = 0; i < arr.count; ++i) {
+		printf("dev: %s\nUUID: %s\ntype: %s\n", arr.devs[i].dev_name, arr.devs[i].UUID, arr.devs[i].type);
+	}
+
+	block_devices_array_free(arr);
 	return 0;
 }

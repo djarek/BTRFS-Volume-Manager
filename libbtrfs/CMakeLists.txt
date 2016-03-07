@@ -2,9 +2,11 @@ cmake_minimum_required(VERSION 3.2)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 project(btrfs)
 
-set(CMAKE_CC_FLAGS "-std=c99 -Wall -Werror -fno-strict-aliasing")
+set(CMAKE_C_FLAGS "-std=gnu99 -Wall -fno-strict-aliasing -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_C_FLAGS_DEBUG ${CMAKE_CC_FLAGS} "-g -O0")
 
-MESSAGE(STATUS ${CMAKE_CC_FLAGS_RELEASE})
+
+MESSAGE(STATUS ${CMAKE_CC_FLAGS_DEBUG})
 include(btrfs-iface/CMakeLists.txt)
 add_library(btrfs SHARED libbtrfs.c ${iface_dir})
 

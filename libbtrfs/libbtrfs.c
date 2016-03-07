@@ -1,5 +1,6 @@
 
 #include "btrfs-iface/ioctl.h"
+#include "btrfs.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -7,10 +8,13 @@
 #include <dirent.h>
 #include <sys/statfs.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <linux/magic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <libgen.h>
+
+#include <blkid/blkid.h>
 
 int btrfs_create_subvol(const char *path)
 {
@@ -138,10 +142,66 @@ out:
 	return ret;
 }
 
-int btrfs_scrub_start(const char *path)
+int get_devices(struct block_devices_array *arr)
 {
+	blkid_cache cache = NULL;
+	blkid_dev_iterate iter = NULL;
+	blkid_dev dev = NULL;
+	blkid_probe probe;
+	const char *temp = NULL;
+	int ret = 0;
+	arr->count = 0;
+	arr->devs = NULL;
+
+	if (arr == NULL) {
+		return -1;
+	}
+
+	if (blkid_get_cache(&cache, NULL) < 0) {
+		return -1;
+	}
+	blkid_probe_all(cache);
+	iter = blkid_dev_iterate_begin(cache);
+
+	while (blkid_dev_next(iter, &dev) == 0) {
+		dev = blkid_verify(cache, dev);
+		if (dev) {
+			arr->devs = realloc(arr->devs, (++arr->count)*sizeof(struct block_device));
+			struct block_device *bd =  &arr->devs[arr->count - 1];
+			memset(bd, 0, sizeof(struct block_device));
+			bd->dev_name = strdup(blkid_dev_devname(dev));
+			probe = blkid_new_probe_from_filename(bd->dev_name);
+			if (!probe) {
+				ret = -1;
+				printf("no probe\n");
+				continue;
+			}
+
+			if (!blkid_probe_lookup_value(probe, "UUID", &temp, NULL)) {
+				bd->UUID = strdup(temp);
+			}
+			if (!blkid_probe_lookup_value(probe, "TYPE", &temp, NULL)) {
+				bd->type = strdup(temp);
+			}
+			blkid_free_probe(probe);
+		}
+	}
+
+	blkid_dev_iterate_end(iter);
+	blkid_put_cache(cache);
+	return ret;
+
 }
 
-int btrfs_scrub_cancel(const char *path)
-{
+void block_device_free(struct block_device *dev) {
+	free(dev->dev_name);
+	free(dev->type);
+	free(dev->UUID);
+}
+
+void block_devices_array_free(struct block_devices_array arr) {
+	for (int i = 0; i < arr.count; ++i) {
+		block_device_free(&arr.devs[i]);
+	}
+	free(arr.devs);
 }
