@@ -16,6 +16,7 @@ struct block_devices_array
 {
 	struct block_device *devs;
 	int count;
+
 };
 
 void block_device_free(struct block_device *dev);
