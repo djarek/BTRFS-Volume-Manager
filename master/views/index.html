@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" href="indexStyle.css">
+</head>
+<style>
+	.divLogin
+	{
+		position: absolute;
+		background:rgba(255,255,255,0.3);
+		box-shadow: 0 3px 5px rgba(255, 0, 0, 0.3);
+		border-radius: 20px;
+		border-style: solid;
+    	border-width: 2px;
+	    padding: 20px;
+	    top: 50%;
+	    left: 50%;
+	    margin-top: -75px;
+	    margin-left: -175px;
+	    width: 320px;
+	    height: 120px;
+	}​
+</style>
+<body>
+	<div class="divLogin">
+		<label id="lbName" style="position: absolute; top: 30px">Username</label>
+		<input type="text" style="position: absolute; top: 25px; left: 110px" id="iName"
+		placeholder="Username" required/>
+		<label id="lbPassword" style="position: absolute; top: 70px">Password</label>
+		<input type="text" placeholder="Password" required id="iPassword"
+		style="position: absolute; top: 65px; left: 110px; -webkit-text-security: circle;" />
+		<button id="btLogin" style="position: absolute; top: 110px; width: 320px; height: 40px;"  type="submit">Login</button>
+	</div>
+</body>
+<script>
+
+	(function()
+	{
+		document.getElementById("iName").addEventListener("keydown", clickEnter);
+		document.getElementById("iPassword").addEventListener("keydown", clickEnter);
+		document.getElementById("btLogin").addEventListener("click", Login);
+
+		var socket = new WebSocket("ws://localhost/auth"),
+				container = document.getElementById("container");
+
+		function clickEnter()
+		{
+			if (event.keyCode == 13)
+			{
+				document.getElementById('btLogin').click()
+			}
+		}
+		function Login()
+		{
+			socket.send([document.getElementById("iName").value, document.getElementById("iPassword").value]);
+			socket.onmessage = function (e) {
+				if(e.data == "true"){
+					location.href = window.location.href.concat("content.html")
+				} else {
+					document.getElementById("iName").value = "";
+					document.getElementById("iPassword").value = "";
+				}
+
+			};
+			return socket;
+		}
+	})();
+</script>
+</html>
