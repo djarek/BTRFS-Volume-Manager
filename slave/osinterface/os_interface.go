@@ -1,8 +1,7 @@
 package osinterface
 
 /*
-#cgo CFLAGS: -I ../../libbtrfs/
-#cgo LDFLAGS: -L../../libbtrfs/build -lbtrfs -lblkid
+#cgo LDFLAGS: -lbtrfs -lblkid
 #include "btrfs.h"
 #include <mntent.h>
 */

@@ -1,10 +1,5 @@
 package main
 
-/*
-#cgo LDFLAGS: -L../libbtrfs/build -lbtrfs -lblkid
-*/
-import "C"
-
 import (
 	"fmt"
 	"log"
@@ -13,6 +8,7 @@ import (
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/wsserver"
+	_ "github.com/djarek/btrfs-volume-manager/slave/osinterface"
 )
 
 type testMarshaller struct {
@@ -49,6 +45,5 @@ func main() {
 	authenticator := &testAuthenticator{}
 	cm := wsserver.NewConnectionManager(marshaller, parser, authenticator)
 	http.HandleFunc("/ws", cm.HandleWSConnection)
-
 	log.Fatalln(http.ListenAndServe("127.0.0.1:8080", nil))
 }
