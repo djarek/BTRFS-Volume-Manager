@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"gopkg.in/mgo.v2"
@@ -65,33 +64,7 @@ func main() {
 	defer session.Close()
 
 	session.SetMode(mgo.Monotonic, true)
-
-	// drop database?
-	if dropDB {
-		err = session.DB("btrfs").DropDatabase()
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// Collection Users in BTRFS database
 	collUsers = session.DB("btrfs").C("users")
-
-	// database initialization? (Insert admin/admin user)
-	if initializeDB {
-		id := bson.NewObjectId()
-		err = collUsers.Insert(
-			&models.User{
-				ID:           id,
-				Username:     "admin",
-				Password:     "admin",
-				FirstName:    "John",
-				SecondName:   "Doe",
-				RegisterDate: time.Now()})
-		if err != nil {
-			panic(err)
-		}
-	}
 
 	port := flag.Int("port", 80, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
