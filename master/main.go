@@ -18,6 +18,12 @@ var initializeDB = false
 var dropDB = false
 var session *mgo.Session
 var collUsers *mgo.Collection
+var (
+	upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+)
 
 // User model prototype without hashing algorithms implemented yet
 type User struct {
@@ -65,9 +71,11 @@ func authentication(loginAndPass []string) bool {
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Upgrade(w, r, w.Header(), 1024, 1024)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+		log.Println(err)
+		return
 	}
 	for {
 		messageType, msg, err := conn.ReadMessage()
