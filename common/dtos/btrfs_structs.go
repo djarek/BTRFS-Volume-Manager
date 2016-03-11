@@ -46,3 +46,9 @@ type MountPoint struct {
 	DumpFrequency int
 	FSCKPassNo    int
 }
+
+//BtrfsSubVolume represents a subvolume on a btrfs volume
+type BtrfsSubVolume struct {
+	RelativePath string
+	VolumeUUID   UUIDType
+}
