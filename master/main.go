@@ -6,12 +6,11 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-
-	"./models"
 )
 
 var connections map[*websocket.Conn]bool
@@ -20,8 +19,41 @@ var dropDB = false
 var session *mgo.Session
 var collUsers *mgo.Collection
 
-func authentiaction(loginAndPass []string) bool {
-	result := models.User{}
+// User model prototype without hashing algorithms implemented yet
+type User struct {
+	ID           bson.ObjectId `bson:"_id,omitempty"`
+	Username     string        `bson:"username,omitempty"`
+	Password     string        `bson:"password,omitempty"`
+	FirstName    string        `bson:"firstName"`
+	SecondName   string        `bson:"secondName"`
+	RegisterDate time.Time     `bson:"registerDate"`
+}
+
+//StorageServer represents a Network Attached Storage device
+type StorageServer struct {
+	ID   bson.ObjectId `bson:"_id,omitempty"`
+	Name string        `bson:"name"`
+}
+
+//BlockDevice represents a block device retrieved by blkid probe
+type BlockDevice struct {
+	ID    bson.ObjectId `bson:"_id,omitempty"`
+	VolID bson.ObjectId `bson:"volID"` //can be empty
+	Path  string        `bson:"path,omitempty"`
+	UUID  string        `bson:"uuid,omitempty"`
+	Type  string        `bson:"type,omitempty"`
+}
+
+//BtrfsVolume represents a filesystem volume which can potentially span over
+//multiple devices
+type BtrfsVolume struct {
+	ID     bson.ObjectId `bson:"_id,omitempty"`
+	ServID bson.ObjectId `bson:"servID"` // can be empty
+	Label  string        `bson:"label"`
+}
+
+func authentication(loginAndPass []string) bool {
+	result := User{}
 	err := collUsers.Find(bson.M{"username": loginAndPass[0]}).One(&result)
 	if err != nil {
 		return false
@@ -33,11 +65,6 @@ func authentiaction(loginAndPass []string) bool {
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Origin") != "http://"+r.Host {
-		http.Error(w, "Origin not allowed", 403)
-		return
-	}
-
 	conn, err := websocket.Upgrade(w, r, w.Header(), 1024, 1024)
 	if err != nil {
 		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
@@ -48,7 +75,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data := strings.Split(string(msg), ",")
-		if authentiaction(data) {
+		if authentication(data) {
 			conn.WriteMessage(messageType, []byte("true"))
 		} else {
 			conn.WriteMessage(messageType, []byte("false"))
@@ -82,5 +109,5 @@ func main() {
 	addr := fmt.Sprintf("localhost:%d", *port)
 
 	err = http.ListenAndServe(addr, nil)
-	fmt.Println(err.Error())
+	log.Fatalln(err.Error())
 }
