@@ -67,7 +67,7 @@ func ProbeMountPoints() ([]dtos.MountPoint, error) {
 		}
 
 		mountPoint := dtos.MountPoint{
-			Path:          C.GoString(mntPtr.mnt_fsname),
+			Identifier:    C.GoString(mntPtr.mnt_fsname),
 			MountPath:     C.GoString(mntPtr.mnt_dir),
 			MountType:     C.GoString(mntPtr.mnt_type),
 			MountOptions:  C.GoString(mntPtr.mnt_opts),
@@ -78,6 +78,29 @@ func ProbeMountPoints() ([]dtos.MountPoint, error) {
 	}
 
 	return ret, nil
+}
+
+func getBtrfsMountPointsMap(mountPoints []dtos.MountPoint) map[string]*dtos.MountPoint {
+	mountPointsMap := make(map[string]*dtos.MountPoint)
+	for i, mountPoint := range mountPoints {
+		if mountPoint.MountType != btrfsDevType {
+			continue
+		}
+
+		mountPointsMap[mountPoint.Identifier] = &mountPoints[i]
+	}
+	return mountPointsMap
+}
+
+func filterBtrfsVolumeMountPoints(mountPointsMap map[string]*dtos.MountPoint, vol dtos.BtrfsVolume) (mountPoints []dtos.MountPoint) {
+	for _, dev := range vol.PresentDevs {
+		mountPoint, ok := mountPointsMap[dev.Path]
+		if ok {
+			mountPoints = append(mountPoints, *mountPoint)
+		}
+	}
+	//TODO: Handle UUID mount point identifiers
+	return
 }
 
 /*ProbeBtrfsVolumes retrieves information about all Btrfs volumes present on
@@ -94,11 +117,20 @@ func ProbeBtrfsVolumes(devs []dtos.BlockDevice) (vols []dtos.BtrfsVolume, err er
 		blockDevMap[dev.UUID] = append(devSlice, dev)
 	}
 
+	mountPoints, err := ProbeMountPoints()
+	if err != nil {
+		return
+	}
+	mountPointsMap := getBtrfsMountPointsMap(mountPoints)
+
 	for UUID, volDevs := range blockDevMap {
-		vols = append(vols, dtos.BtrfsVolume{
+		vol := dtos.BtrfsVolume{
 			UUID:        UUID,
-			DeviceCount: len(volDevs),
-		})
+			PresentDevs: volDevs,
+		}
+		vol.MountPoints = filterBtrfsVolumeMountPoints(mountPointsMap, vol)
+
+		vols = append(vols, vol)
 	}
 
 	return

@@ -34,12 +34,13 @@ type BtrfsVolume struct {
 	ServerID    StorageServerID
 	UUID        UUIDType
 	Label       string
-	DeviceCount int
+	MountPoints []MountPoint
+	PresentDevs []BlockDevice
 }
 
 //MountPoint describes a filesystem mount directory and options
 type MountPoint struct {
-	Path          string
+	Identifier    string
 	MountPath     string
 	MountType     string
 	MountOptions  string
@@ -49,6 +50,8 @@ type MountPoint struct {
 
 //BtrfsSubVolume represents a subvolume on a btrfs volume
 type BtrfsSubVolume struct {
+	SubVolID     int
 	RelativePath string
 	VolumeUUID   UUIDType
+	ParentUUID   UUIDType
 }
