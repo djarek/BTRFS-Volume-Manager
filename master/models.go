@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -37,4 +38,26 @@ type BtrfsVolume struct {
 	ID     bson.ObjectId `bson:"_id,omitempty"`
 	ServID bson.ObjectId `bson:"servID"` // can be empty
 	Label  string        `bson:"label"`
+}
+
+func initializeDB() {
+	id := bson.NewObjectId()
+	err := collUsers.Insert(
+		&User{
+			ID:               id,
+			Username:         "admin",
+			Password:         "admin",
+			FirstName:        "Jo",
+			LastName:         "Doe",
+			RegistrationDate: time.Now()})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func dropDB(database *mgo.Database) {
+	err := database.DropDatabase()
+	if err != nil {
+		panic(err)
+	}
 }

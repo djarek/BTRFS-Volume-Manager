@@ -13,8 +13,6 @@ import (
 )
 
 var connections map[*websocket.Conn]bool
-var initializeDB = false
-var dropDB = false
 var session *mgo.Session
 var collUsers *mgo.Collection
 var (
@@ -66,6 +64,13 @@ func main() {
 
 	session.SetMode(mgo.Monotonic, true)
 	collUsers = session.DB("btrfs").C("users")
+
+	// Initialize data base if it is empty
+	var results []User
+	err = collUsers.Find(nil).All(&results)
+	if len(results) == 0 {
+		initializeDB()
+	}
 
 	port := flag.Int("port", 80, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
