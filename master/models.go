@@ -8,12 +8,12 @@ import (
 
 // User model prototype without hashing algorithms implemented yet
 type User struct {
-	ID           bson.ObjectId `bson:"_id,omitempty"`
-	Username     string        `bson:"username,omitempty"`
-	Password     string        `bson:"password,omitempty"`
-	FirstName    string        `bson:"firstName"`
-	SecondName   string        `bson:"secondName"`
-	RegisterDate time.Time     `bson:"registerDate"`
+	ID               bson.ObjectId `bson:"_id,omitempty"`
+	Username         string        `bson:"username,omitempty"`
+	Password         string        `bson:"password,omitempty"`
+	FirstName        string        `bson:"firstName"`
+	LastName         string        `bson:"lastName"`
+	RegistrationDate time.Time     `bson:"registrationDate"`
 }
 
 //StorageServer represents a Network Attached Storage device
