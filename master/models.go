@@ -40,6 +40,13 @@ type BtrfsVolume struct {
 	Label  string        `bson:"label"`
 }
 
+func findByUsername(username string) (User, error) {
+	result := User{}
+	err := collUsers.Find(bson.M{"username": username}).One(&result)
+
+	return result, err
+}
+
 func initializeDB() {
 	id := bson.NewObjectId()
 	err := collUsers.Insert(

@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
 
 var connections map[*websocket.Conn]bool
@@ -23,11 +22,10 @@ var (
 )
 
 func authentication(loginAndPass []string) bool {
-	result := User{}
-	err := collUsers.Find(bson.M{"username": loginAndPass[0]}).One(&result)
+	usr, err := findByUsername(loginAndPass[0])
 	if err != nil {
 		return false
-	} else if result.Password == loginAndPass[1] {
+	} else if usr.Password == loginAndPass[1] {
 		return true
 	} else {
 		return false
