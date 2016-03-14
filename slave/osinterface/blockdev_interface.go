@@ -100,7 +100,7 @@ func probeMountPoints() ([]dtos.MountPoint, error) {
 	return ret, nil
 }
 
-var devMatcher = regexp.MustCompile("path ([a-zA-Z0-9\\/]+)")
+var devMatcher = regexp.MustCompile("path (\\/dev\\/[a-zA-Z0-9\\/_]+)")
 
 func probeBtrfsVolumes() (vols []dtos.BtrfsVolume, err error) {
 	output, err := runBtrfsCommand("filesystem", "show", "--all-devices")
