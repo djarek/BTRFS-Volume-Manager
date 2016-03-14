@@ -4,9 +4,11 @@ import "errors"
 import "C"
 
 var (
-	//ErrorMTabOpen indicates that the application was not able to open
+	//ErrMTabOpen indicates that the application was not able to open
 	//the mounts file.
-	ErrorMTabOpen = errors.New("Unable to open mtab file " + mTabFilePath)
+	ErrMTabOpen = errors.New("Unable to open mtab file " + mTabFilePath)
+	//ErrBlkidGetCache occurs when the blkid_get_cache function fails
+	ErrBlkidGetCache = errors.New("Unable to retrieve blkid cache(/etc/blkid/blkid.tab")
 )
 
 //BtrfsCmdError represents an error returned by the btrfs tool

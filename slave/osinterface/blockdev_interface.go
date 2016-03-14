@@ -1,18 +1,17 @@
 package osinterface
 
 /*
-#cgo LDFLAGS: -lbtrfs -lblkid
-#include "btrfs.h"
+#cgo LDFLAGS: -lblkid
 #include <mntent.h>
+#include <blkid/blkid.h>
+#include <string.h>
 */
 import "C"
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 )
@@ -24,8 +23,10 @@ const (
 )
 
 var (
-	mTabFilePathCString   = C.CString(mTabFilePath)
-	setmntentFlagsCString = C.CString(setmntentFlags)
+	mTabFilePathCString     = C.CString(mTabFilePath)
+	setmntentFlagsCString   = C.CString(setmntentFlags)
+	blkidUUIDTagNameCString = C.CString("UUID")
+	blkidTypeTagNameCString = C.CString("TYPE")
 
 	BlockDevCache = BlockDeviceCache{
 		blockDevsByKIdent: make(map[string]*dtos.BlockDevice),
@@ -73,20 +74,21 @@ type BlockDeviceCache struct {
 }
 
 func (bdc *BlockDeviceCache) RescanBlockDevs() (err error) {
-	bdc.mtx.Lock()
-	defer bdc.mtx.Unlock()
-
 	blockDevs, err := probeBlockDevices()
 	if err != nil {
 		return
 	}
 
-	bdc.blockDevs = blockDevs
-	bdc.blockDevsByKIdent = make(map[string]*dtos.BlockDevice)
-
+	blockDevsByKIdent := make(map[string]*dtos.BlockDevice)
 	for i, blockDev := range bdc.blockDevs {
 		bdc.blockDevsByKIdent[blockDev.Path] = &bdc.blockDevs[i]
 	}
+
+	bdc.mtx.Lock()
+	defer bdc.mtx.Unlock()
+
+	bdc.blockDevs = blockDevs
+	bdc.blockDevsByKIdent = blockDevsByKIdent
 	return
 }
 
@@ -97,22 +99,46 @@ func (bdc *BlockDeviceCache) FindByKernelIdentifier(identifier string) (*dtos.Bl
 	return bd, ok
 }
 
+func blkidDevToBlockDev(dev C.blkid_dev) (blockDev dtos.BlockDevice) {
+	blockDev.Path = C.GoString(C.blkid_dev_devname(dev))
+	blkidTagIterator := C.blkid_tag_iterate_begin(dev)
+	var tagValue, tagType *C.char
+
+	for C.blkid_tag_next(blkidTagIterator, &tagType, &tagValue) == 0 {
+		if C.strcmp(tagType, blkidUUIDTagNameCString) == 0 {
+			blockDev.UUID = dtos.UUIDType(C.GoString(tagValue))
+		} else if C.strcmp(tagType, blkidTypeTagNameCString) == 0 {
+			blockDev.Type = C.GoString(tagValue)
+		}
+	}
+	return
+}
+
 func probeBlockDevices() ([]dtos.BlockDevice, error) {
-	var devArray C.struct_block_devices_array
-	if C.get_devices(&devArray) != 0 {
-		return nil, errors.New("Unable to retrieve device list")
-	}
-	defer C.block_devices_array_free(devArray)
+	var blkidCache C.blkid_cache
+	var blkidDevIterator C.blkid_dev_iterate
+	var blkidDev C.blkid_dev
 
-	devArraySlice := (*[1 << 30]C.struct_block_device)(unsafe.Pointer(devArray.devs))[:devArray.count:devArray.count]
-
-	ret := make([]dtos.BlockDevice, devArray.count)
-	for i, dev := range devArraySlice {
-		ret[i].Path = C.GoString(dev.dev_name)
-		ret[i].UUID = dtos.UUIDType(C.GoString(dev.UUID))
-		ret[i].Type = C.GoString(dev._type)
+	if C.blkid_get_cache(&blkidCache, nil) < 0 {
+		return nil, ErrBlkidGetCache
 	}
-	return ret, nil
+	defer C.blkid_put_cache(blkidCache)
+
+	C.blkid_probe_all(blkidCache)
+	blkidDevIterator = C.blkid_dev_iterate_begin(blkidCache)
+
+	var blockDevs []dtos.BlockDevice
+
+	for C.blkid_dev_next(blkidDevIterator, &blkidDev) == 0 {
+		blkidDev = C.blkid_verify(blkidCache, blkidDev)
+
+		if blkidDev != nil {
+			dev := blkidDevToBlockDev(blkidDev)
+			blockDevs = append(blockDevs, dev)
+		}
+	}
+
+	return blockDevs, nil
 }
 
 func probeMountPoints() ([]dtos.MountPoint, error) {
@@ -122,7 +148,7 @@ func probeMountPoints() ([]dtos.MountPoint, error) {
 
 	mTab := C.setmntent(mTabFilePathCString, setmntentFlagsCString)
 	if mTab == nil {
-		return nil, ErrorMTabOpen
+		return nil, ErrMTabOpen
 	}
 	defer C.endmntent(mTab)
 
