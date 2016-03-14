@@ -5,10 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	"crypto/subtle"
 
+	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/wsserver"
 	"github.com/gorilla/websocket"
 	"gopkg.in/mgo.v2"
 )
@@ -64,6 +67,13 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type authenticator struct{}
+
+func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, error) {
+	response := []byte("auth_ok")
+	return response, nil
+}
+
 func main() {
 	session, err := mgo.Dial("localhost")
 	if err != nil {
@@ -94,16 +104,17 @@ func main() {
 		initializeDB()
 	}
 
-	port := flag.Int("port", 80, "port to serve on")
+	port := flag.Int("port", 8080, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
 	flag.Parse()
 
 	connections = make(map[*websocket.Conn]bool)
-
 	fs := http.Dir(*dir)
+
 	fileHandler := http.FileServer(fs)
 	http.Handle("/", fileHandler)
-	http.HandleFunc("/auth", authHandler)
+	connectionManager := wsserver.NewConnectionManager(dtos.JSONMessageMarshaller{}, messageParser{}, authenticator{})
+	http.HandleFunc("/ws", connectionManager.HandleWSConnection)
 
 	log.Printf("Running on port %d\n", *port)
 
