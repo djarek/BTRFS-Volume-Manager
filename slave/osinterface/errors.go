@@ -1,7 +1,6 @@
 package osinterface
 
 import "errors"
-import "C"
 
 var (
 	//ErrMTabOpen indicates that the application was not able to open

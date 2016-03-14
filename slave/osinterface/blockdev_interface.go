@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 )
@@ -27,77 +26,7 @@ var (
 	setmntentFlagsCString   = C.CString(setmntentFlags)
 	blkidUUIDTagNameCString = C.CString("UUID")
 	blkidTypeTagNameCString = C.CString("TYPE")
-
-	BlockDevCache = BlockDeviceCache{
-		blockDevsByKIdent: make(map[string]*dtos.BlockDevice),
-	}
-
-	MountsCache = MountPointCache{
-		mountPointByIdent: make(map[string]*dtos.MountPoint),
-	}
 )
-
-type MountPointCache struct {
-	mtx               sync.RWMutex
-	mountPointByIdent map[string]*dtos.MountPoint
-	mountPoints       []dtos.MountPoint
-}
-
-func (mpc *MountPointCache) RescanMountPoints() (err error) {
-	mpc.mtx.Lock()
-	defer mpc.mtx.Unlock()
-
-	mountPoints, err := probeMountPoints()
-	if err != nil {
-		return
-	}
-	mpc.mountPoints = mountPoints
-	mpc.mountPointByIdent = make(map[string]*dtos.MountPoint)
-
-	for i, mountPoint := range mpc.mountPoints {
-		mpc.mountPointByIdent[mountPoint.Identifier] = &mountPoints[i]
-	}
-	return
-}
-
-func (mpc *MountPointCache) FindByKernelIdentifier(identifier string) (*dtos.MountPoint, bool) {
-	mpc.mtx.RLock()
-	defer mpc.mtx.RUnlock()
-	mp, ok := mpc.mountPointByIdent[identifier]
-	return mp, ok
-}
-
-type BlockDeviceCache struct {
-	mtx               sync.RWMutex
-	blockDevsByKIdent map[string]*dtos.BlockDevice
-	blockDevs         []dtos.BlockDevice
-}
-
-func (bdc *BlockDeviceCache) RescanBlockDevs() (err error) {
-	blockDevs, err := probeBlockDevices()
-	if err != nil {
-		return
-	}
-
-	blockDevsByKIdent := make(map[string]*dtos.BlockDevice)
-	for i, blockDev := range bdc.blockDevs {
-		bdc.blockDevsByKIdent[blockDev.Path] = &bdc.blockDevs[i]
-	}
-
-	bdc.mtx.Lock()
-	defer bdc.mtx.Unlock()
-
-	bdc.blockDevs = blockDevs
-	bdc.blockDevsByKIdent = blockDevsByKIdent
-	return
-}
-
-func (bdc *BlockDeviceCache) FindByKernelIdentifier(identifier string) (*dtos.BlockDevice, bool) {
-	bdc.mtx.RLock()
-	defer bdc.mtx.RUnlock()
-	bd, ok := bdc.blockDevsByKIdent[identifier]
-	return bd, ok
-}
 
 func blkidDevToBlockDev(dev C.blkid_dev) (blockDev dtos.BlockDevice) {
 	blockDev.Path = C.GoString(C.blkid_dev_devname(dev))
@@ -187,7 +116,7 @@ func probeBtrfsVolumes() (vols []dtos.BtrfsVolume, err error) {
 
 		foundMatches := devMatcher.FindAllStringSubmatch(volBlock, -1)
 		for _, devMatch := range foundMatches {
-			dev, ok := BlockDevCache.FindByKernelIdentifier(devMatch[1])
+			dev, ok := BlockDeviceCache.FindByKernelIdentifier(devMatch[1])
 			if ok {
 				volume.Devices = append(volume.Devices, dev)
 			}
