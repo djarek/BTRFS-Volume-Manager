@@ -2,20 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/wsserver"
+	"github.com/djarek/btrfs-volume-manager/slave/osinterface"
 )
 
 type testMarshaller struct {
 }
 
 func (tm testMarshaller) Marshall(wsMsg *dtos.WebSocketMessage) ([]byte, error) {
-
 	return []byte("test"), nil
 }
+
 func (tm testMarshaller) Unmarshall(buffer []byte) (*dtos.WebSocketMessage, error) {
 	fmt.Println(buffer)
 	return &dtos.WebSocketMessage{}, nil
@@ -43,6 +45,6 @@ func main() {
 	authenticator := &testAuthenticator{}
 	cm := wsserver.NewConnectionManager(marshaller, parser, authenticator)
 	http.HandleFunc("/ws", cm.HandleWSConnection)
-	err := http.ListenAndServe("127.0.0.1:8080", nil)
-	panic(err)
+	fmt.Print(osinterface.BlockDeviceCache.RescanBlockDevs())
+	log.Fatalln(http.ListenAndServe("127.0.0.1:8080", nil))
 }

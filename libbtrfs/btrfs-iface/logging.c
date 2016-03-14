@@ -22,8 +22,9 @@ int __wrap_printf(const char *__restrict format, ...)
 	va_list argptr;
 	va_start(argptr, format);
 	char *msg = NULL;
-	vasprintf(&msg, format, argptr);
+	int ret = vasprintf(&msg, format, argptr);
 	log_info_callback(msg);
+	return ret;
 }
 
 int __wrap_sprintf(char *__restrict s, const char *__restrict format, ...)
@@ -31,6 +32,7 @@ int __wrap_sprintf(char *__restrict s, const char *__restrict format, ...)
 	va_list argptr;
 	va_start(argptr, format);
 	char *msg = NULL;
-
-	//vasprintf();
+	int ret = vasprintf(&msg, format, argptr);
+	
+	return ret;
 }

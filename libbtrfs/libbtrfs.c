@@ -142,13 +142,27 @@ out:
 	return ret;
 }
 
+void blkid_dev_to_block_device(blkid_dev dev, struct block_device *bd) {
+	bd->dev_name = strdup(blkid_dev_devname(dev));
+	blkid_tag_iterate tag_iterator = blkid_tag_iterate_begin(dev);
+	const char *type, *value;
+	while (blkid_tag_next(tag_iterator, &type, &value) == 0) {
+		if (strcmp(type, "UUID") == 0) {
+			bd->UUID = strdup(value);	
+		}
+		if (strcmp(type, "TYPE") == 0) {
+			bd->type = strdup(value);
+		}
+	}
+	
+	blkid_tag_iterate_end(tag_iterator);
+}
+
 int get_devices(struct block_devices_array *arr)
 {
 	blkid_cache cache = NULL;
 	blkid_dev_iterate iter = NULL;
 	blkid_dev dev = NULL;
-	blkid_probe probe;
-	const char *temp = NULL;
 	int ret = 0;
 	arr->count = 0;
 	arr->devs = NULL;
@@ -169,21 +183,8 @@ int get_devices(struct block_devices_array *arr)
 			arr->devs = realloc(arr->devs, (++arr->count)*sizeof(struct block_device));
 			struct block_device *bd =  &arr->devs[arr->count - 1];
 			memset(bd, 0, sizeof(struct block_device));
-			bd->dev_name = strdup(blkid_dev_devname(dev));
-			probe = blkid_new_probe_from_filename(bd->dev_name);
-			if (!probe) {
-				ret = -1;
-				printf("no probe\n");
-				continue;
-			}
 
-			if (!blkid_probe_lookup_value(probe, "UUID", &temp, NULL)) {
-				bd->UUID = strdup(temp);
-			}
-			if (!blkid_probe_lookup_value(probe, "TYPE", &temp, NULL)) {
-				bd->type = strdup(temp);
-			}
-			blkid_free_probe(probe);
+			blkid_dev_to_block_device(dev, bd);
 		}
 	}
 
