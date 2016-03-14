@@ -64,21 +64,6 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func hashing() {
-	password := []byte("admin")
-
-	// Hashing the password with the default cost of 10
-	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(hashedPassword))
-
-	// Comparing the password with the hash
-	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte("admin1"))
-	fmt.Println(err) // nil means it is a match
-}
-
 func main() {
 	session, err := mgo.Dial("localhost")
 	if err != nil {
