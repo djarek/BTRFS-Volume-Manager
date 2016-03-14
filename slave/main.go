@@ -45,6 +45,6 @@ func main() {
 	authenticator := &testAuthenticator{}
 	cm := wsserver.NewConnectionManager(marshaller, parser, authenticator)
 	http.HandleFunc("/ws", cm.HandleWSConnection)
-	fmt.Print(osinterface.BlockDevCache.RescanBlockDevs())
+	fmt.Print(osinterface.BlockDeviceCache.RescanBlockDevs())
 	log.Fatalln(http.ListenAndServe("127.0.0.1:8080", nil))
 }
