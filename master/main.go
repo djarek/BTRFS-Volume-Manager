@@ -7,9 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"crypto/subtle"
-
 	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 )
 
@@ -30,12 +29,13 @@ func authentication(loginAndPass LoginAndPassword) bool {
 	usr, err := findByUsername(loginAndPass.Username)
 	if err != nil {
 		return false
-	} else if subtle.ConstantTimeCompare(
-		[]byte(usr.Password), []byte(loginAndPass.Password)) == 1 {
-		return true
-	} else {
-		return false
 	}
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(usr.HashedPassword), []byte(loginAndPass.Password))
+	if err == nil {
+		return true
+	}
+	return false
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +62,21 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 			conn.WriteMessage(messageType, []byte("false"))
 		}
 	}
+}
+
+func hashing() {
+	password := []byte("admin")
+
+	// Hashing the password with the default cost of 10
+	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(hashedPassword))
+
+	// Comparing the password with the hash
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte("admin1"))
+	fmt.Println(err) // nil means it is a match
 }
 
 func main() {
