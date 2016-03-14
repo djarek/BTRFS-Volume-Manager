@@ -30,12 +30,11 @@ type StorageServer struct {
 //BtrfsVolume represents a filesystem volume which can potentially span over
 //multiple devices
 type BtrfsVolume struct {
-	ID          VolumeID
-	ServerID    StorageServerID
-	UUID        UUIDType
-	Label       string
-	MountPoints []MountPoint
-	PresentDevs []BlockDevice
+	ID       VolumeID
+	ServerID StorageServerID
+	UUID     UUIDType
+	Label    string
+	Devices  []*BlockDevice
 }
 
 //MountPoint describes a filesystem mount directory and options

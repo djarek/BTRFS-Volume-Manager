@@ -7,6 +7,11 @@ package osinterface
 */
 import "C"
 import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
@@ -21,16 +26,81 @@ const (
 var (
 	mTabFilePathCString   = C.CString(mTabFilePath)
 	setmntentFlagsCString = C.CString(setmntentFlags)
+
+	BlockDevCache = BlockDeviceCache{
+		blockDevsByKIdent: make(map[string]*dtos.BlockDevice),
+	}
+
+	MountsCache = MountPointCache{
+		mountPointByIdent: make(map[string]*dtos.MountPoint),
+	}
 )
 
-/*ProbeBlockDevices retrieves all block devices present on
-the device and returns a slice of dtos.BlockDevice structs that
-represent them.
-*/
-func ProbeBlockDevices() []dtos.BlockDevice {
+type MountPointCache struct {
+	mtx               sync.RWMutex
+	mountPointByIdent map[string]*dtos.MountPoint
+	mountPoints       []dtos.MountPoint
+}
+
+func (mpc *MountPointCache) RescanMountPoints() (err error) {
+	mpc.mtx.Lock()
+	defer mpc.mtx.Unlock()
+
+	mountPoints, err := probeMountPoints()
+	if err != nil {
+		return
+	}
+	mpc.mountPoints = mountPoints
+	mpc.mountPointByIdent = make(map[string]*dtos.MountPoint)
+
+	for i, mountPoint := range mpc.mountPoints {
+		mpc.mountPointByIdent[mountPoint.Identifier] = &mountPoints[i]
+	}
+	return
+}
+
+func (mpc *MountPointCache) FindByKernelIdentifier(identifier string) (*dtos.MountPoint, bool) {
+	mpc.mtx.RLock()
+	defer mpc.mtx.RUnlock()
+	mp, ok := mpc.mountPointByIdent[identifier]
+	return mp, ok
+}
+
+type BlockDeviceCache struct {
+	mtx               sync.RWMutex
+	blockDevsByKIdent map[string]*dtos.BlockDevice
+	blockDevs         []dtos.BlockDevice
+}
+
+func (bdc *BlockDeviceCache) RescanBlockDevs() (err error) {
+	bdc.mtx.Lock()
+	defer bdc.mtx.Unlock()
+
+	blockDevs, err := probeBlockDevices()
+	if err != nil {
+		return
+	}
+
+	bdc.blockDevs = blockDevs
+	bdc.blockDevsByKIdent = make(map[string]*dtos.BlockDevice)
+
+	for i, blockDev := range bdc.blockDevs {
+		bdc.blockDevsByKIdent[blockDev.Path] = &bdc.blockDevs[i]
+	}
+	return
+}
+
+func (bdc *BlockDeviceCache) FindByKernelIdentifier(identifier string) (*dtos.BlockDevice, bool) {
+	bdc.mtx.RLock()
+	defer bdc.mtx.RUnlock()
+	bd, ok := bdc.blockDevsByKIdent[identifier]
+	return bd, ok
+}
+
+func probeBlockDevices() ([]dtos.BlockDevice, error) {
 	var devArray C.struct_block_devices_array
 	if C.get_devices(&devArray) != 0 {
-		return nil
+		return nil, errors.New("Unable to retrieve device list")
 	}
 	defer C.block_devices_array_free(devArray)
 
@@ -42,14 +112,10 @@ func ProbeBlockDevices() []dtos.BlockDevice {
 		ret[i].UUID = dtos.UUIDType(C.GoString(dev.UUID))
 		ret[i].Type = C.GoString(dev._type)
 	}
-
-	return ret
+	return ret, nil
 }
 
-/*ProbeMountPoints retrieves all mounted filesystems and mount
-information and stores this data in a slice of dtos.MountPoint.
-*/
-func ProbeMountPoints() ([]dtos.MountPoint, error) {
+func probeMountPoints() ([]dtos.MountPoint, error) {
 	var mnt C.struct_mntent
 	var buf [4096]C.char
 	var ret []dtos.MountPoint
@@ -76,62 +142,30 @@ func ProbeMountPoints() ([]dtos.MountPoint, error) {
 		}
 		ret = append(ret, mountPoint)
 	}
-
 	return ret, nil
 }
 
-func getBtrfsMountPointsMap(mountPoints []dtos.MountPoint) map[string]*dtos.MountPoint {
-	mountPointsMap := make(map[string]*dtos.MountPoint)
-	for i, mountPoint := range mountPoints {
-		if mountPoint.MountType != btrfsDevType {
-			continue
-		}
+var devMatcher = regexp.MustCompile("path ([a-zA-Z0-9\\/]+)")
 
-		mountPointsMap[mountPoint.Identifier] = &mountPoints[i]
-	}
-	return mountPointsMap
-}
-
-func filterBtrfsVolumeMountPoints(mountPointsMap map[string]*dtos.MountPoint, vol dtos.BtrfsVolume) (mountPoints []dtos.MountPoint) {
-	for _, dev := range vol.PresentDevs {
-		mountPoint, ok := mountPointsMap[dev.Path]
-		if ok {
-			mountPoints = append(mountPoints, *mountPoint)
-		}
-	}
-	//TODO: Handle UUID mount point identifiers
-	return
-}
-
-/*ProbeBtrfsVolumes retrieves information about all Btrfs volumes present on
-the system and stores them in a slice of dtos.BtrfsVolumes.
-*/
-func ProbeBtrfsVolumes(devs []dtos.BlockDevice) (vols []dtos.BtrfsVolume, err error) {
-	blockDevMap := make(map[dtos.UUIDType][]dtos.BlockDevice)
-
-	for _, dev := range devs {
-		if dev.Type != btrfsDevType {
-			continue
-		}
-		devSlice := blockDevMap[dev.UUID]
-		blockDevMap[dev.UUID] = append(devSlice, dev)
-	}
-
-	mountPoints, err := ProbeMountPoints()
+func probeBtrfsVolumes() (vols []dtos.BtrfsVolume, err error) {
+	output, err := runBtrfsCommand("filesystem", "show", "--all-devices")
 	if err != nil {
 		return
 	}
-	mountPointsMap := getBtrfsMountPointsMap(mountPoints)
+	volBlocks := strings.Split(output, "Label:")
 
-	for UUID, volDevs := range blockDevMap {
-		vol := dtos.BtrfsVolume{
-			UUID:        UUID,
-			PresentDevs: volDevs,
+	volBlocks = volBlocks[1:]
+	for _, volBlock := range volBlocks {
+		var volume dtos.BtrfsVolume
+		_, err = fmt.Sscanf(volBlock, "%s uuid: %s\n", &volume.Label, &volume.UUID)
+
+		foundMatches := devMatcher.FindAllStringSubmatch(volBlock, -1)
+		for _, devMatch := range foundMatches {
+			dev, ok := BlockDevCache.FindByKernelIdentifier(devMatch[1])
+			if ok {
+				volume.Devices = append(volume.Devices, dev)
+			}
 		}
-		vol.MountPoints = filterBtrfsVolumeMountPoints(mountPointsMap, vol)
-
-		vols = append(vols, vol)
 	}
-
 	return
 }

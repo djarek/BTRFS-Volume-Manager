@@ -8,7 +8,7 @@ import (
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/wsserver"
-	_ "github.com/djarek/btrfs-volume-manager/slave/osinterface"
+	"github.com/djarek/btrfs-volume-manager/slave/osinterface"
 )
 
 type testMarshaller struct {
@@ -45,5 +45,6 @@ func main() {
 	authenticator := &testAuthenticator{}
 	cm := wsserver.NewConnectionManager(marshaller, parser, authenticator)
 	http.HandleFunc("/ws", cm.HandleWSConnection)
+	osinterface.ProbeBtrfsVolumes()
 	log.Fatalln(http.ListenAndServe("127.0.0.1:8080", nil))
 }
