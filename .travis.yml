@@ -34,7 +34,7 @@ before_script:
     )
 
 script:
-  - go get -v ./...
+  - go get -t -v ./...
   - diff -u <(echo -n) <(gofmt -d .)
   - go vet ./slave ./master ./common/dtos ./common/wsserver
   - go test -v -race ./slave/ ./slave/osinterface ./common/dtos ./common/wsserver
