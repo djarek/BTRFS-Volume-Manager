@@ -1,19 +1,6 @@
 language: go
 sudo: true
 
-addons:
-  apt:
-    sources:
-      - george-edison55-precise-backports # cmake 3.x
-    packages:
-      - cmake
-      - cmake-data
-
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libblkid-dev uuid-dev
-
-
 matrix:
   include:
     - go: 1.4
@@ -22,16 +9,10 @@ matrix:
     - go: tip
 
 install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libblkid-dev
   - go get golang.org/x/tools/cmd/vet
 
-before_script:
-  - source env_var_setup.sh
-  - (cd libbtrfs;
-    mkdir build;
-    cd build;
-    cmake ..;
-    make btrfs;
-    )
 
 script:
   - go get -t -v ./...
