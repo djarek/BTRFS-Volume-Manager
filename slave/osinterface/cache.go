@@ -41,8 +41,8 @@ func (mpc *mountPointCache) RescanMountPoints() (err error) {
 	}
 
 	mountPointByIdent := make(map[string]*dtos.MountPoint)
-	for i, mountPoint := range mpc.mountPoints {
-		mpc.mountPointByIdent[mountPoint.Identifier] = &mountPoints[i]
+	for i, mountPoint := range mountPoints {
+		mountPointByIdent[mountPoint.Identifier] = &mountPoints[i]
 	}
 
 	mpc.mtx.Lock()
@@ -84,8 +84,8 @@ func (bdc *blockDeviceCache) RescanBlockDevs() (err error) {
 	}
 
 	blockDevsByKIdent := make(map[string]*dtos.BlockDevice)
-	for i, blockDev := range bdc.blockDevs {
-		bdc.blockDevsByKIdent[blockDev.Path] = &bdc.blockDevs[i]
+	for i, blockDev := range blockDevs {
+		blockDevsByKIdent[blockDev.Path] = &blockDevs[i]
 	}
 
 	bdc.mtx.Lock()
