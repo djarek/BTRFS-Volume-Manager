@@ -53,7 +53,10 @@
 		}
 		function Login()
 		{
-			socket.send([document.getElementById("iName").value, document.getElementById("iPassword").value]);
+			socket.send(JSON.stringify({
+				"Username": document.getElementById("iName").value,
+				"Password": document.getElementById("iPassword").value
+			}));
 			socket.onmessage = function (e) {
 				if(e.data == "true"){
 					location.href = window.location.href.concat("content.html")

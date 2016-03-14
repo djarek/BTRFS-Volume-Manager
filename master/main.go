@@ -1,31 +1,37 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
+
+	"crypto/subtle"
 
 	"github.com/gorilla/websocket"
 	"gopkg.in/mgo.v2"
 )
 
-var connections map[*websocket.Conn]bool
-var session *mgo.Session
-var collUsers *mgo.Collection
+const dbName = "btrfs"
+const usersCollectionName = "users"
+
 var (
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
+	connections map[*websocket.Conn]bool
+	session     *mgo.Session
+	collUsers   *mgo.Collection
 )
 
-func authentication(loginAndPass []string) bool {
-	usr, err := findByUsername(loginAndPass[0])
+func authentication(loginAndPass LoginAndPassword) bool {
+	usr, err := findByUsername(loginAndPass.Username)
 	if err != nil {
 		return false
-	} else if usr.Password == loginAndPass[1] {
+	} else if subtle.ConstantTimeCompare(
+		[]byte(usr.Password), []byte(loginAndPass.Password)) == 1 {
 		return true
 	} else {
 		return false
@@ -44,7 +50,12 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return
 		}
-		data := strings.Split(string(msg), ",")
+
+		var data LoginAndPassword
+		err = json.Unmarshal([]byte(msg), &data)
+		if err != nil {
+			panic(err)
+		}
 		if authentication(data) {
 			conn.WriteMessage(messageType, []byte("true"))
 		} else {
@@ -61,7 +72,20 @@ func main() {
 	defer session.Close()
 
 	session.SetMode(mgo.Monotonic, true)
-	collUsers = session.DB("btrfs").C("users")
+	collUsers = session.DB(dbName).C(usersCollectionName)
+
+	// Unique index
+	index := mgo.Index{
+		Key:        []string{"username"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = collUsers.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
 
 	// Initialize data base if it is empty
 	var results []User

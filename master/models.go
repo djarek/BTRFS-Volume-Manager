@@ -40,6 +40,12 @@ type BtrfsVolume struct {
 	Label  string        `bson:"label"`
 }
 
+// Simply type for authentication process
+type LoginAndPassword struct {
+	Username string
+	Password string
+}
+
 func findByUsername(username string) (User, error) {
 	result := User{}
 	err := collUsers.Find(bson.M{"username": username}).One(&result)
