@@ -22,7 +22,7 @@ type SendCallback func(error)
 //RecvMessageParser specifies the type that is used to resolve received messages
 //into appropriate callbacks
 type RecvMessageParser interface {
-	ParseRecvMsg(*dtos.WebSocketMessage) error
+	ParseRecvMsg(dtos.WebSocketMessage) error
 }
 
 type sendTask struct {
@@ -60,37 +60,19 @@ func (c *Connection) registerOnCloseCallback(cb func()) {
 //It returns nil when the authentication is successful and the connection is ready to be
 //served.
 func (c *Connection) authenticate(authenticator WebSocketAuthenticator) (err error) {
-	webSocketMsg := authenticator.GetChallenge(c.wsConnection.RemoteAddr())
-	payload, err := c.marshaller.Marshall(webSocketMsg)
-
-	if err != nil {
-		log.Println("Error when marshalling authentication challenge: " + err.Error())
-		return
-	}
-
-	err = c.internalWrite(websocket.TextMessage, payload)
-	if err != nil {
-		log.Println("Error when sending authentication challenge: " + err.Error())
-		return
-	}
-
 	c.wsConnection.SetReadDeadline(time.Now().Add(authenticationReadTimeout))
-	_, payload, err = c.wsConnection.ReadMessage()
+	_, payload, err := c.wsConnection.ReadMessage()
 	if err != nil {
-		log.Println("Error when reading authentication challenge response: " + err.Error())
+		log.Println("Error when reading authentication message: " + err.Error())
 		return
 	}
 
-	webSocketMsg, err = c.marshaller.Unmarshall(payload)
+	response, err := authenticator.Authenticate(c.wsConnection.RemoteAddr(), payload)
+	c.internalWrite(websocket.TextMessage, response)
 	if err != nil {
-		log.Println("Error when unmarshalling authentication challenge response: " + err.Error())
-		return
+		log.Println("Error when authenticating: " + err.Error())
 	}
 
-	err = authenticator.VerifyChallengeResponse(c.wsConnection.RemoteAddr(), webSocketMsg)
-	if err != nil {
-		log.Println("Error when verifying challenger response: " + err.Error())
-	}
 	c.authenticated = true
 	return
 }
@@ -177,7 +159,7 @@ func (c *Connection) Close() error {
 //SendAsync sends a WebSocketMessage asynchronously and returns immediately if an
 //error is encountered or the message write has been enqueued. If an error is
 //encountered during the network transfer, the error is passed to the callback
-func (c *Connection) SendAsync(msg *dtos.WebSocketMessage, callback SendCallback) error {
+func (c *Connection) SendAsync(msg dtos.WebSocketMessage, callback SendCallback) error {
 	webSocketMsgBytes, err := c.marshaller.Marshall(msg)
 	if err != nil {
 		log.Println("Error when marshalling WebSocketMessage: " + err.Error())

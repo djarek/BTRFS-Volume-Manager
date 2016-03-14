@@ -41,7 +41,7 @@
 		document.getElementById("iPassword").addEventListener("keydown", clickEnter);
 		document.getElementById("btLogin").addEventListener("click", Login);
 
-		var socket = new WebSocket("ws://localhost/auth"),
+		var socket = new WebSocket("ws://localhost:8080/ws"),
 				container = document.getElementById("container");
 
 		function clickEnter()
@@ -58,7 +58,7 @@
 				"Password": document.getElementById("iPassword").value
 			}));
 			socket.onmessage = function (e) {
-				if(e.data == "true"){
+				if(e.data == "auth_ok"){
 					location.href = window.location.href.concat("content.html")
 				} else {
 					document.getElementById("iName").value = "";
