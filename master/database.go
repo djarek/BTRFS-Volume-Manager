@@ -58,6 +58,7 @@ func startDB() {
 	}
 }
 
+// Function that close database connection
 func stopDB() {
 	log.Println("Closing Databse connection")
 	session.Close()
