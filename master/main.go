@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -35,18 +36,19 @@ func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, erro
 	}
 	usr, err := findByUsername(data.Username)
 	if err != nil {
-		return []byte("auth_wrong"), nil
+		return []byte("auth_wrong"), errors.New("No such user")
 	}
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(usr.HashedPassword), []byte(data.Password))
 	if err == nil {
 		return []byte("auth_ok"), nil
 	}
-	return []byte("auth_wrong"), nil
+	return []byte("auth_wrong"), errors.New("Wrong passsword")
 }
 
 func main() {
 	startDB()
+	defer stopDB()
 	port := flag.Int("port", 8080, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
 	flag.Parse()
@@ -64,18 +66,10 @@ func main() {
 	addr := fmt.Sprintf("localhost:%d", *port)
 
 	sigs := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
-
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		sig := <-sigs
-		log.Println(sig)
-		stopDB()
-		log.Println("Exiting program")
-		os.Exit(0)
+		panic(http.ListenAndServe(addr, nil))
 	}()
-	err := http.ListenAndServe(addr, nil)
-	log.Fatalln(err.Error())
-	<-done
+	<-sigs
 }
