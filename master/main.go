@@ -7,16 +7,15 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/wsserver"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/mgo.v2"
 )
-
-const dbName = "btrfs"
-const usersCollectionName = "users"
 
 var (
 	upgrader = websocket.Upgrader{
@@ -24,8 +23,6 @@ var (
 		WriteBufferSize: 1024,
 	}
 	connections map[*websocket.Conn]bool
-	session     *mgo.Session
-	collUsers   *mgo.Collection
 )
 
 type authenticator struct{}
@@ -49,35 +46,7 @@ func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, erro
 }
 
 func main() {
-	session, err := mgo.Dial("localhost")
-	if err != nil {
-		panic(err)
-	}
-	defer session.Close()
-
-	session.SetMode(mgo.Monotonic, true)
-	collUsers = session.DB(dbName).C(usersCollectionName)
-
-	// Unique index
-	index := mgo.Index{
-		Key:        []string{"username"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true,
-		Sparse:     true,
-	}
-	err = collUsers.EnsureIndex(index)
-	if err != nil {
-		panic(err)
-	}
-
-	// Initialize data base if it is empty
-	var results []User
-	err = collUsers.Find(nil).All(&results)
-	if len(results) == 0 {
-		initializeDB()
-	}
-
+	startDB()
 	port := flag.Int("port", 8080, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
 	flag.Parse()
@@ -94,6 +63,19 @@ func main() {
 
 	addr := fmt.Sprintf("localhost:%d", *port)
 
-	err = http.ListenAndServe(addr, nil)
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		log.Println(sig)
+		stopDB()
+		log.Println("Exiting program")
+		os.Exit(0)
+	}()
+	err := http.ListenAndServe(addr, nil)
 	log.Fatalln(err.Error())
+	<-done
 }

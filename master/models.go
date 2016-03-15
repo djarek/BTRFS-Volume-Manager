@@ -3,8 +3,6 @@ package main
 import (
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -45,39 +43,4 @@ type BtrfsVolume struct {
 type LoginAndPassword struct {
 	Username string
 	Password string
-}
-
-func findByUsername(username string) (User, error) {
-	result := User{}
-	err := collUsers.Find(bson.M{"username": username}).One(&result)
-
-	return result, err
-}
-
-func initializeDB() {
-	id := bson.NewObjectId()
-	password := []byte("admin")
-	hashedPassword, err := bcrypt.GenerateFromPassword(
-		password, bcrypt.DefaultCost)
-	if err != nil {
-		panic(err)
-	}
-	err = collUsers.Insert(
-		&User{
-			ID:               id,
-			Username:         "admin",
-			HashedPassword:   string(hashedPassword),
-			FirstName:        "Jo",
-			LastName:         "Doe",
-			RegistrationDate: time.Now()})
-	if err != nil {
-		panic(err)
-	}
-}
-
-func dropDB(database *mgo.Database) {
-	err := database.DropDatabase()
-	if err != nil {
-		panic(err)
-	}
 }
