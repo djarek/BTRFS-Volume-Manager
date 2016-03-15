@@ -129,7 +129,7 @@ func (c *Connection) readerLoop() {
 	for {
 		_, msgBytes, err := c.wsConnection.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
 				log.Println("Error when reading websocket message: " + err.Error())
 			}
 			return
