@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -11,7 +12,7 @@ import (
 type User struct {
 	ID               bson.ObjectId `bson:"_id,omitempty"`
 	Username         string        `bson:"username,omitempty"`
-	Password         string        `bson:"password,omitempty"`
+	HashedPassword   string        `bson:"hashedPassword,omitempty"`
 	FirstName        string        `bson:"firstName"`
 	LastName         string        `bson:"lastName"`
 	RegistrationDate time.Time     `bson:"registrationDate"`
@@ -55,11 +56,17 @@ func findByUsername(username string) (User, error) {
 
 func initializeDB() {
 	id := bson.NewObjectId()
-	err := collUsers.Insert(
+	password := []byte("admin")
+	hashedPassword, err := bcrypt.GenerateFromPassword(
+		password, bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	err = collUsers.Insert(
 		&User{
 			ID:               id,
 			Username:         "admin",
-			Password:         "admin",
+			HashedPassword:   string(hashedPassword),
 			FirstName:        "Jo",
 			LastName:         "Doe",
 			RegistrationDate: time.Now()})

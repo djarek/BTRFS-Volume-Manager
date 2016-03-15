@@ -8,11 +8,10 @@ import (
 	"net"
 	"net/http"
 
-	"crypto/subtle"
-
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/wsserver"
 	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 )
 
@@ -29,49 +28,24 @@ var (
 	collUsers   *mgo.Collection
 )
 
-func authentication(loginAndPass LoginAndPassword) bool {
-	usr, err := findByUsername(loginAndPass.Username)
-	if err != nil {
-		return false
-	} else if subtle.ConstantTimeCompare(
-		[]byte(usr.Password), []byte(loginAndPass.Password)) == 1 {
-		return true
-	} else {
-		return false
-	}
-}
-
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
-		log.Println(err)
-		return
-	}
-	for {
-		messageType, msg, err := conn.ReadMessage()
-		if err != nil {
-			return
-		}
-
-		var data LoginAndPassword
-		err = json.Unmarshal([]byte(msg), &data)
-		if err != nil {
-			panic(err)
-		}
-		if authentication(data) {
-			conn.WriteMessage(messageType, []byte("true"))
-		} else {
-			conn.WriteMessage(messageType, []byte("false"))
-		}
-	}
-}
-
 type authenticator struct{}
 
 func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, error) {
-	response := []byte("auth_ok")
-	return response, nil
+	var data LoginAndPassword
+	err := json.Unmarshal(authMsg, &data)
+	if err != nil {
+		panic(err)
+	}
+	usr, err := findByUsername(data.Username)
+	if err != nil {
+		return []byte("auth_wrong"), nil
+	}
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(usr.HashedPassword), []byte(data.Password))
+	if err == nil {
+		return []byte("auth_ok"), nil
+	}
+	return []byte("auth_wrong"), nil
 }
 
 func main() {
