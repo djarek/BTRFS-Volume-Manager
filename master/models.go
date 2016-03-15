@@ -38,9 +38,3 @@ type BtrfsVolume struct {
 	ServID bson.ObjectId `bson:"servID"` // can be empty
 	Label  string        `bson:"label"`
 }
-
-// Simply type for authentication process
-type LoginAndPassword struct {
-	Username string
-	Password string
-}

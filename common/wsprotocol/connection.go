@@ -1,4 +1,4 @@
-package wsserver
+package wsprotocol
 
 import (
 	"errors"
@@ -18,10 +18,16 @@ const (
 	writeChannelSize          = 16
 )
 
+var (
+	/*ErrSessionAlreadyAssigned indicates that the Connection already has
+	  a session assigned (authentication has already been performed)*/
+	ErrSessionAlreadyAssigned = errors.New("SessionContext already assigned.")
+)
+
 //RecvMessageParser specifies the type that is used to resolve received messages
 //into appropriate callbacks
 type RecvMessageParser interface {
-	ParseRecvMsg(dtos.WebSocketMessage) error
+	ParseRecvMsg(dtos.WebSocketMessage, *Connection) error
 }
 
 type outputMessage struct {
@@ -30,12 +36,20 @@ type outputMessage struct {
 	messageType int
 }
 
+//SessionContext represents the current user session
+type SessionContext interface {
+	ReleaseConnection(*Connection)
+}
+
 //Connection wraps the websocket connection
 type Connection struct {
 	wsConnection    *websocket.Conn
 	marshaller      dtos.WebSocketMessageMarshaller
 	parser          RecvMessageParser
 	onCloseCallback func()
+
+	sessionMtx sync.Mutex
+	session    SessionContext
 
 	writeChannel chan outputMessage
 	closeOnce    sync.Once
@@ -51,27 +65,9 @@ func newConnection(
 		wsConnection: wsConnection,
 		marshaller:   marshaller,
 		parser:       parser,
+		session:      nil,
 
 		writeChannel: make(chan outputMessage, writeChannelSize)}
-}
-
-//authenticate performs authentication of the connection using the supplied authenticator.
-//It returns nil when the authentication is successful and the connection is ready to be
-//served.
-func (c *Connection) authenticate(authenticator WebSocketAuthenticator) (err error) {
-	c.wsConnection.SetReadDeadline(time.Now().Add(authenticationReadTimeout))
-	_, payload, err := c.wsConnection.ReadMessage()
-	if err != nil {
-		log.Println("Error when reading authentication message: " + err.Error())
-		return
-	}
-
-	response, err := authenticator.Authenticate(c.wsConnection.RemoteAddr(), payload)
-	c.internalWrite(websocket.TextMessage, response)
-	if err != nil {
-		log.Println("Error when authenticating: " + err.Error())
-	}
-	return
 }
 
 //serve launches the reading and writing loops for this websocket connection.
@@ -89,24 +85,59 @@ func (c *Connection) readerLoop() {
 		c.wsConnection.SetReadDeadline(time.Now().Add(pongTimeout))
 		return nil
 	})
+	c.wsConnection.SetPingHandler(func(string) error {
+		c.enqueueOutputMessage(outputMessage{
+			channel:     nil,
+			payload:     []byte{},
+			messageType: websocket.PongMessage,
+		})
+		return nil
+	})
 
 	for {
-		_, msgBytes, err := c.wsConnection.ReadMessage()
+		msgType, msgBytes, err := c.wsConnection.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) &&
-				websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway) {
 				log.Println("Error when reading websocket message: " + err.Error())
 			}
+			return
+		}
+		if msgType != websocket.TextMessage || len(msgBytes) == 0 {
 			return
 		}
 
 		websocketMsg, err := c.marshaller.Unmarshall(msgBytes)
 		if err != nil {
 			log.Println("Error when unmarshalling WebSocketMessage (received malformed data?): " + err.Error())
-			return
+			log.Println(msgBytes)
+			continue
 		}
-		c.parser.ParseRecvMsg(websocketMsg)
+		c.parser.ParseRecvMsg(websocketMsg, c)
 	}
+}
+
+//GetSession returns the current session in a thread-safe way
+func (c *Connection) GetSession() SessionContext {
+	c.sessionMtx.Lock()
+	c.sessionMtx.Unlock()
+
+	return c.session
+}
+
+/*SetSession sets the current session in a thread-safe way. If there is
+a session already set, the function will return an error.*/
+func (c *Connection) SetSession(s SessionContext) error {
+	c.sessionMtx.Lock()
+	defer c.sessionMtx.Unlock()
+
+	if c.session != nil {
+		return ErrSessionAlreadyAssigned
+	}
+
+	c.session = s
+	return nil
 }
 
 /*Close attempts to send a proper close to the client. If the connection
@@ -115,8 +146,8 @@ will be performed properly anyway.*/
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
 		c.enqueueOutputMessage(outputMessage{
-			channel:     make(chan error, 1),
-			payload:     websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+			channel:     nil,
+			payload:     websocket.FormatCloseMessage(websocket.CloseNormalClosure, "CLOSE"),
 			messageType: websocket.CloseMessage,
 		})
 	})
@@ -158,7 +189,7 @@ func (c *Connection) writerLoop() {
 	for {
 		select {
 		case <-pingTicker.C:
-			err := c.internalWrite(websocket.PingMessage, []byte{})
+			err := c.internalWrite(websocket.PingMessage, []byte("lol"))
 			if err != nil {
 				log.Println("Error when sending websocket ping: " + err.Error())
 				return
@@ -186,6 +217,9 @@ func (c *Connection) flushRemainingTasks() {
 }
 
 func (c *Connection) internalClose() {
+	session := c.GetSession()
+	session.ReleaseConnection(c)
+
 	close(c.writeChannel)
 	c.flushRemainingTasks()
 
@@ -196,13 +230,16 @@ func (c *Connection) internalClose() {
 }
 
 func (c *Connection) sendOutputMessage(msg outputMessage) error {
-	err := c.internalWrite(websocket.TextMessage, msg.payload)
-	msg.channel <- err
+	err := c.internalWrite(msg.messageType, msg.payload)
+	if msg.channel != nil {
+		msg.channel <- err
+	}
 	return err
 }
 
 func (c *Connection) internalWrite(msgType int, payload []byte) error {
-	err := c.wsConnection.SetWriteDeadline(time.Now().Add(writeTimeout))
+	deadline := time.Now().Add(writeTimeout)
+	err := c.wsConnection.SetWriteDeadline(deadline)
 	if err != nil {
 		return err
 	}

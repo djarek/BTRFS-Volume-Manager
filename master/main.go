@@ -1,19 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
-	"github.com/djarek/btrfs-volume-manager/common/wsserver"
+	"github.com/djarek/btrfs-volume-manager/common/wsprotocol"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,22 +26,17 @@ var (
 
 type authenticator struct{}
 
-func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, error) {
-	var data LoginAndPassword
-	err := json.Unmarshal(authMsg, &data)
+func (a authenticator) Authenticate(credentials dtos.AuthenticationRequest) error {
+	usr, err := usersRepo.FindUserByUsername(credentials.Username)
 	if err != nil {
-		panic(err)
-	}
-	usr, err := usersRepo.FindUserByUsername(data.Username)
-	if err != nil {
-		return []byte("auth_wrong"), errors.New("No such user")
+		return errors.New("No such user")
 	}
 	err = bcrypt.CompareHashAndPassword(
-		[]byte(usr.HashedPassword), []byte(data.Password))
-	if err == nil {
-		return []byte("auth_ok"), nil
+		[]byte(usr.HashedPassword), []byte(credentials.Password))
+	if err != nil {
+		return errors.New("Wrong passsword")
 	}
-	return []byte("auth_wrong"), errors.New("Wrong passsword")
+	return nil
 }
 
 func main() {
@@ -59,7 +52,9 @@ func main() {
 	fileHandler := http.FileServer(fs)
 	http.Handle("/", fileHandler)
 
-	connectionManager := wsserver.NewConnectionManager(dtos.JSONMessageMarshaller{}, messageParser{}, authenticator{})
+	connectionManager := wsprotocol.NewConnectionManager(
+		dtos.JSONMessageMarshaller{},
+		messageParser{})
 	http.HandleFunc("/ws", connectionManager.HandleWSConnection)
 
 	log.Printf("Running on port %d\n", *port)

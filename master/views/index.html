@@ -34,6 +34,40 @@
 	</div>
 </body>
 <script>
+	nextRequestId = 0;
+
+	var WebSocketMessage = function(payloadObject) {
+			this.type = payloadObject.getCommandType();
+			this.requestID = nextRequestId++;
+			this.payload = payloadObject;
+	};
+
+	function onAuthenticationResponse(payloadObject) {
+		if (payloadObject.result == "auth_ok") {
+			//TODO: Handle session tokens
+			location.href = window.location.href.concat("content.html")
+		} else {
+			document.getElementById("iName").value = "";
+			document.getElementById("iPassword").value = "";
+		}
+	}
+
+	var messageHandlers = {
+		10001 : onAuthenticationResponse
+	};
+	function dispatchMessageHandler(message) {
+		//TODO: verify requestID
+		//TODO: Error on unsupported message type
+		messageHandlers[message.type](message.payload);
+	}
+
+	var AuthenticationRequest = function(username, password) {
+	    this.username = username;
+	    this.password = password;
+	    this.getCommandType = function() {
+				return 1;
+			}
+	};
 
 	(function()
 	{
@@ -44,6 +78,11 @@
 		var socket = new WebSocket("ws://localhost:8080/ws"),
 				container = document.getElementById("container");
 
+		socket.onmessage = function (e) {
+					var msg = JSON.parse(e.data);
+					dispatchMessageHandler(msg);
+		};
+
 		function clickEnter()
 		{
 			if (event.keyCode == 13)
@@ -53,19 +92,13 @@
 		}
 		function Login()
 		{
-			socket.send(JSON.stringify({
-				"Username": document.getElementById("iName").value,
-				"Password": document.getElementById("iPassword").value
-			}));
-			socket.onmessage = function (e) {
-				if(e.data == "auth_ok"){
-					location.href = window.location.href.concat("content.html")
-				} else {
-					document.getElementById("iName").value = "";
-					document.getElementById("iPassword").value = "";
-				}
+			var credentials = new AuthenticationRequest(
+				document.getElementById("iName").value,
+				document.getElementById("iPassword").value
+			);
 
-			};
+			var msg = new WebSocketMessage(credentials);
+			socket.send(JSON.stringify(msg));
 			return socket;
 		}
 	})();

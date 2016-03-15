@@ -6,19 +6,25 @@ import "encoding/json"
 type WebSocketMessageType int32
 
 const (
-	//WSMsgError indicates the WebSocketMessage is an error response
+	//WSMsgError indicates this WebSocketMessage contains an error object
 	WSMsgError WebSocketMessageType = iota
-	//WSMsgRequestRegisterSlave indicates this is a request for the master to register a new slave
-	WSMsgRequestRegisterSlave
-	//WSMsgResponseRegisterSlave indicates this is a response to a previous request to register a new slave
-	WSMsgResponseRegisterSlave
+	/*WSMsgAuthenticationRequest indicates this WebSocketMessage contains an
+	AuthenticationRequest*/
+	WSMsgAuthenticationRequest
+)
+
+const (
+	/*WSMsgAuthenticationResponse indicates this WebSocketMessage contains an
+	AuthenticationResponse*/
+	WSMsgAuthenticationResponse WebSocketMessageType = iota + 10001
 )
 
 //WebSocketMessage represents a message received from a client or
 //ready to be sent to it
 type WebSocketMessage struct {
-	Type    WebSocketMessageType
-	Payload []byte
+	Type      WebSocketMessageType `json:"type"`
+	RequestID int64                `json:"requestID"`
+	Payload   *json.RawMessage     `json:"payload"`
 }
 
 //WebSocketMessageMarshaller allows conversion from byte slices to WSMessage structs
@@ -41,4 +47,16 @@ func (j JSONMessageMarshaller) Marshall(msg WebSocketMessage) (buf []byte, err e
 func (JSONMessageMarshaller) Unmarshall(buf []byte) (msg WebSocketMessage, err error) {
 	err = json.Unmarshal(buf, &msg)
 	return
+}
+
+//AuthenticationRequest represents a request from the client to perform authentication
+type AuthenticationRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+/*AuthenticationResponse represents a response to the client indicating whether
+authentication succeeded or failed*/
+type AuthenticationResponse struct {
+	Result string `json:"result"`
 }

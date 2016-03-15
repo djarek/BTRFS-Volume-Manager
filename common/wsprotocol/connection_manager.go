@@ -1,4 +1,4 @@
-package wsserver
+package wsprotocol
 
 import (
 	"log"
@@ -25,18 +25,16 @@ type ConnectionManager struct {
 	mtx         sync.RWMutex
 	nextCID     ConnectionID
 
-	marshaller    dtos.WebSocketMessageMarshaller
-	parser        RecvMessageParser
-	authenticator WebSocketAuthenticator
+	marshaller dtos.WebSocketMessageMarshaller
+	parser     RecvMessageParser
 }
 
 //NewConnectionManager creates a valid new instance of a ConnectionManager
-func NewConnectionManager(marshaller dtos.WebSocketMessageMarshaller, parser RecvMessageParser, authenticator WebSocketAuthenticator) *ConnectionManager {
+func NewConnectionManager(marshaller dtos.WebSocketMessageMarshaller, parser RecvMessageParser) *ConnectionManager {
 	return &ConnectionManager{
-		connections:   make(map[ConnectionID]*Connection),
-		marshaller:    marshaller,
-		parser:        parser,
-		authenticator: authenticator}
+		connections: make(map[ConnectionID]*Connection),
+		marshaller:  marshaller,
+		parser:      parser}
 }
 
 func (cm *ConnectionManager) registerConnection(connection *Connection) ConnectionID {
@@ -67,13 +65,6 @@ func (cm *ConnectionManager) HandleWSConnection(w http.ResponseWriter, r *http.R
 	}
 
 	connection := newConnection(wsConnection, cm.marshaller, cm.parser)
-
-	err = connection.authenticate(cm.authenticator)
-	if err != nil {
-		connection.Close()
-		return
-	}
-
 	CID := cm.registerConnection(connection)
 	connection.onCloseCallback = func() { cm.unregisterConnection(CID) }
 	connection.serve()
