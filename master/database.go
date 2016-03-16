@@ -13,15 +13,50 @@ const dbName = "btrfs"
 const usersCollectionName = "users"
 
 var (
-	connected bool = false
+	connected = false
 	session   *mgo.Session
-	collUsers *mgo.Collection
 	db        *mgo.Database
+	usersRepo UsersRepository
 )
 
-func findByUsername(username string) (User, error) {
+// UsersRepository is a collection of users
+type UsersRepository struct {
+	coll *mgo.Collection
+}
+
+// FindUserByUsername provides searching for user by username.
+// It returns one User and error.
+func (repo UsersRepository) FindUserByUsername(username string) (User, error) {
 	result := User{}
-	err := collUsers.Find(bson.M{"username": username}).One(&result)
+	err := repo.coll.Find(bson.M{"username": username}).One(&result)
+	return result, err
+}
+
+// FindUsersByFirstName provides searching for users by first name.
+// It returns array of Users and error.
+func (repo UsersRepository) FindUsersByFirstName(
+	firstName string) ([]User, error) {
+	var result []User
+	err := repo.coll.Find(bson.M{"firstName": firstName}).All(&result)
+	return result, err
+}
+
+// FindUsersByLastName provides searching for users by last name.
+// It returns array of Users and error.
+func (repo UsersRepository) FindUsersByLastName(
+	lastName string) ([]User, error) {
+	var result []User
+	err := repo.coll.Find(bson.M{"lastName": lastName}).All(&result)
+	return result, err
+}
+
+// FindUsersByRegistrationDate provides sarching for users by registration date.
+// It returns array of Users and error.
+func (repo UsersRepository) FindUsersByRegistrationDate(
+	registrationDate time.Time) ([]User, error) {
+	var result []User
+	err := repo.coll.Find(bson.M{
+		"registrationDate": registrationDate}).All(&result)
 	return result, err
 }
 
@@ -35,7 +70,7 @@ func startDB() {
 	db = session.DB(dbName)
 	connected = true
 	session.SetMode(mgo.Monotonic, true)
-	collUsers = session.DB(dbName).C(usersCollectionName)
+	usersRepo.coll = session.DB(dbName).C(usersCollectionName)
 
 	// Unique index
 	index := mgo.Index{
@@ -45,14 +80,14 @@ func startDB() {
 		Background: true,
 		Sparse:     true,
 	}
-	err = collUsers.EnsureIndex(index)
+	err = usersRepo.coll.EnsureIndex(index)
 	if err != nil {
 		panic(err)
 	}
 
 	// Initialize data base if it is empty
 	var results []User
-	err = collUsers.Find(nil).All(&results)
+	err = usersRepo.coll.Find(nil).All(&results)
 	if len(results) == 0 {
 		initializeDB()
 	}
@@ -74,7 +109,7 @@ func initializeDB() {
 	if err != nil {
 		panic(err)
 	}
-	err = collUsers.Insert(
+	err = usersRepo.coll.Insert(
 		&User{
 			ID:               id,
 			Username:         "admin",

@@ -34,7 +34,7 @@ func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, erro
 	if err != nil {
 		panic(err)
 	}
-	usr, err := findByUsername(data.Username)
+	usr, err := usersRepo.FindUserByUsername(data.Username)
 	if err != nil {
 		return []byte("auth_wrong"), errors.New("No such user")
 	}
