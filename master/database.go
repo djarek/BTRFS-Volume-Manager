@@ -60,6 +60,8 @@ func (repo UsersRepository) FindUsersByRegistrationDate(
 	return result, err
 }
 
+// Function that connects database and basically all necessary initialization
+// processes.
 func startDB() {
 	log.Println("Connecting to Database")
 	var err error
@@ -93,14 +95,14 @@ func startDB() {
 	}
 }
 
-// Function that closes database connection
+// Function that closes database connection.
 func stopDB() {
 	log.Println("Closing databse connection")
 	session.Close()
 	connected = false
 }
 
-// Function that adds an admin user
+// Function that adds an admin user.
 func initializeDB() {
 	id := bson.NewObjectId()
 	password := []byte("admin")
@@ -123,7 +125,7 @@ func initializeDB() {
 	log.Println("Initialized database. Added admin")
 }
 
-// Funtion that drops entire DB
+// Funtion that drops entire database.
 func dropDB() {
 	err := session.DB(dbName).DropDatabase()
 	if err != nil {
