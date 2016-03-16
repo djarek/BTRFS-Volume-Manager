@@ -49,20 +49,20 @@ func (a authenticator) Authenticate(addr net.Addr, authMsg []byte) ([]byte, erro
 func main() {
 	startDB()
 	defer stopDB()
+
 	port := flag.Int("port", 8080, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
 	flag.Parse()
-
 	connections = make(map[*websocket.Conn]bool)
-	fs := http.Dir(*dir)
 
+	fs := http.Dir(*dir)
 	fileHandler := http.FileServer(fs)
 	http.Handle("/", fileHandler)
+
 	connectionManager := wsserver.NewConnectionManager(dtos.JSONMessageMarshaller{}, messageParser{}, authenticator{})
 	http.HandleFunc("/ws", connectionManager.HandleWSConnection)
 
 	log.Printf("Running on port %d\n", *port)
-
 	addr := fmt.Sprintf("localhost:%d", *port)
 
 	sigs := make(chan os.Signal, 1)
