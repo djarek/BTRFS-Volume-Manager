@@ -41,6 +41,6 @@ func (j JSONMessageMarshaller) Marshall(msg WebSocketMessage) (buf []byte, err e
 
 //Unmarshall decodes a JSON object to a WebSocketMessage
 func (JSONMessageMarshaller) Unmarshall(buf []byte) (msg WebSocketMessage, err error) {
-	err = json.Unmarshal(buf, msg)
+	err = json.Unmarshal(buf, &msg)
 	return
 }
