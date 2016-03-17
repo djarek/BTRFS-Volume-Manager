@@ -18,10 +18,6 @@ const (
 	writeChannelSize          = 16
 )
 
-//SendCallback is the signature of the function that is called when an async
-//write completes
-type SendCallback func(error)
-
 //RecvMessageParser specifies the type that is used to resolve received messages
 //into appropriate callbacks
 type RecvMessageParser interface {
@@ -29,7 +25,7 @@ type RecvMessageParser interface {
 }
 
 type sendTask struct {
-	callback    SendCallback
+	channel     chan<- error
 	payload     []byte
 	messageType int
 }
@@ -114,7 +110,7 @@ will be performed properly anyway.*/
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
 		c.addSendTask(sendTask{
-			callback:    func(error) {},
+			channel:     make(chan error, 1),
 			payload:     websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 			messageType: websocket.CloseMessage,
 		})
@@ -125,25 +121,25 @@ func (c *Connection) addSendTask(task sendTask) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New("Connection closed")
-			task.callback(err)
 		}
 	}()
 	c.writeChannel <- task
 	return
 }
 
-//SendAsync sends a WebSocketMessage asynchronously and returns immediately if an
-//error is encountered or the message write has been enqueued. If an error is
-//encountered during the network transfer, the error is passed to the callback
-func (c *Connection) SendAsync(msg dtos.WebSocketMessage, callback SendCallback) error {
+/*SendAsync sends a WebSocketMessage asynchronously and returns immediately if an
+error is encountered or the message write has been enqueued. If an error is
+encountered during the network transfer, the error is passed through the
+returned channel. If there is no error, nil is sent on that channel*/
+func (c *Connection) SendAsync(msg dtos.WebSocketMessage) (<-chan error, error) {
 	msgBytes, err := c.marshaller.Marshall(msg)
 	if err != nil {
 		log.Println("Error when marshalling WebSocketMessage: " + err.Error())
-		return err
+		return nil, err
 	}
-
-	return c.addSendTask(sendTask{
-		callback:    callback,
+	channel := make(chan error, 1)
+	return channel, c.addSendTask(sendTask{
+		channel:     channel,
 		payload:     msgBytes,
 		messageType: websocket.TextMessage,
 	})
@@ -196,7 +192,7 @@ func (c *Connection) internalClose() {
 
 func (c *Connection) sendTask(task sendTask) error {
 	err := c.internalWrite(websocket.TextMessage, task.payload)
-	task.callback(err)
+	task.channel <- err
 	return err
 }
 
