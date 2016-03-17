@@ -73,11 +73,11 @@ func (c *Connection) authenticate(authenticator WebSocketAuthenticator) (err err
 	return
 }
 
-//Serve launches the reading and writing loops for this websocket connection.
+//serve launches the reading and writing loops for this websocket connection.
 //It must be called only after authentication is successful.
 //Blocks until the reader loop exits, at which point the connection is properly
 //closed.
-func (c *Connection) Serve() {
+func (c *Connection) serve() {
 	go c.writerLoop()
 	c.readerLoop()
 }

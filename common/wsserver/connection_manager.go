@@ -76,5 +76,5 @@ func (cm *ConnectionManager) HandleWSConnection(w http.ResponseWriter, r *http.R
 
 	CID := cm.registerConnection(connection)
 	connection.onCloseCallback = func() { cm.unregisterConnection(CID) }
-	connection.Serve()
+	connection.serve()
 }
