@@ -24,7 +24,7 @@ type RecvMessageParser interface {
 	ParseRecvMsg(dtos.WebSocketMessage) error
 }
 
-type sendTask struct {
+type outputMessage struct {
 	channel     chan<- error
 	payload     []byte
 	messageType int
@@ -37,7 +37,7 @@ type Connection struct {
 	parser          RecvMessageParser
 	onCloseCallback func()
 
-	writeChannel chan sendTask
+	writeChannel chan outputMessage
 	closeOnce    sync.Once
 }
 
@@ -52,7 +52,7 @@ func newConnection(
 		marshaller:   marshaller,
 		parser:       parser,
 
-		writeChannel: make(chan sendTask, writeChannelSize)}
+		writeChannel: make(chan outputMessage, writeChannelSize)}
 }
 
 //authenticate performs authentication of the connection using the supplied authenticator.
@@ -114,7 +114,7 @@ is in an invalid state, this will fail, however, all the necessary cleanup
 will be performed properly anyway.*/
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
-		c.addSendTask(sendTask{
+		c.enqueueOutputMessage(outputMessage{
 			channel:     make(chan error, 1),
 			payload:     websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 			messageType: websocket.CloseMessage,
@@ -122,13 +122,13 @@ func (c *Connection) Close() {
 	})
 }
 
-func (c *Connection) addSendTask(task sendTask) (err error) {
+func (c *Connection) enqueueOutputMessage(msg outputMessage) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New("Connection closed")
 		}
 	}()
-	c.writeChannel <- task
+	c.writeChannel <- msg
 	return
 }
 
@@ -143,7 +143,7 @@ func (c *Connection) SendAsync(msg dtos.WebSocketMessage) (<-chan error, error) 
 		return nil, err
 	}
 	channel := make(chan error, 1)
-	return channel, c.addSendTask(sendTask{
+	return channel, c.enqueueOutputMessage(outputMessage{
 		channel:     channel,
 		payload:     msgBytes,
 		messageType: websocket.TextMessage,
@@ -164,9 +164,9 @@ func (c *Connection) writerLoop() {
 				return
 			}
 
-		case task := <-c.writeChannel:
-			err := c.sendTask(task)
-			if err != nil || task.messageType == websocket.CloseMessage {
+		case msg := <-c.writeChannel:
+			err := c.sendOutputMessage(msg)
+			if err != nil || msg.messageType == websocket.CloseMessage {
 				return
 			}
 		}
@@ -181,7 +181,7 @@ func (c *Connection) flushRemainingTasks() {
 	for task := range c.writeChannel {
 		/*We ignore the error because we want to make sure the task owners are
 		notified about completion.*/
-		_ = c.sendTask(task)
+		_ = c.sendOutputMessage(task)
 	}
 }
 
@@ -195,9 +195,9 @@ func (c *Connection) internalClose() {
 	c.wsConnection.Close()
 }
 
-func (c *Connection) sendTask(task sendTask) error {
-	err := c.internalWrite(websocket.TextMessage, task.payload)
-	task.channel <- err
+func (c *Connection) sendOutputMessage(msg outputMessage) error {
+	err := c.internalWrite(websocket.TextMessage, msg.payload)
+	msg.channel <- err
 	return err
 }
 
