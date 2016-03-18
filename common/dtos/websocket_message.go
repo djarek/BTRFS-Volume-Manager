@@ -3,17 +3,15 @@ package dtos
 import "encoding/json"
 
 //WebSocketMessageType represents the type of the message.
-type WebSocketMessageType uint8
+type WebSocketMessageType int32
 
 const (
 	//WSMsgError indicates the WebSocketMessage is an error response
 	WSMsgError WebSocketMessageType = iota
-	//WSMsgRequest indicates the WebSocketMessage is a request.
-	//The marshalled request body is in the Payload member.
-	WSMsgRequest
-	//WSMsgResponse indicates the WebSocketMessage is a response.
-	//The marshalled response body is in the Payload member.
-	WSMsgResponse
+	//WSMsgRequestRegisterSlave indicates this is a request for the master to register a new slave
+	WSMsgRequestRegisterSlave
+	//WSMsgResponseRegisterSlave indicates this is a response to a previous request to register a new slave
+	WSMsgResponseRegisterSlave
 )
 
 //WebSocketMessage represents a message received from a client or
