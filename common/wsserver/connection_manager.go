@@ -56,7 +56,7 @@ func (cm *ConnectionManager) unregisterConnection(CID ConnectionID) {
 	delete(cm.connections, CID)
 }
 
-//HandleWSConnection handless the upgrade to a websocket connection and performs
+//HandleWSConnection handles the upgrade to a websocket connection and performs
 //authentication using the wsserver.WebSocketAuthenticator interface.
 //Satisfies the http.HandlerFunc interface.
 func (cm *ConnectionManager) HandleWSConnection(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +75,6 @@ func (cm *ConnectionManager) HandleWSConnection(w http.ResponseWriter, r *http.R
 	}
 
 	CID := cm.registerConnection(connection)
-	connection.registerOnCloseCallback(func() {
-		cm.unregisterConnection(CID)
-	})
-	connection.Serve()
+	connection.onCloseCallback = func() { cm.unregisterConnection(CID) }
+	connection.serve()
 }
