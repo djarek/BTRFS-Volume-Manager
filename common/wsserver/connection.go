@@ -41,7 +41,12 @@ type Connection struct {
 	closeOnce    sync.Once
 }
 
-func newConnection(wsConnection *websocket.Conn, marshaller dtos.WebSocketMessageMarshaller, parser RecvMessageParser) *Connection {
+func newConnection(
+	wsConnection *websocket.Conn,
+	marshaller dtos.WebSocketMessageMarshaller,
+	parser RecvMessageParser,
+) *Connection {
+
 	return &Connection{
 		wsConnection: wsConnection,
 		marshaller:   marshaller,
