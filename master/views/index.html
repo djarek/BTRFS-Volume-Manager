@@ -37,7 +37,7 @@
 	nextRequestId = 0;
 
 	var WebSocketMessage = function(payloadObject) {
-		this.type = payloadObject.getCommandType();
+		this.messageType = payloadObject.getCommandType();
 		this.requestID = nextRequestId++;
 		this.payload = payloadObject;
 	};
@@ -58,7 +58,7 @@
 	function dispatchMessageHandler(message) {
 		//TODO: verify requestID
 		//TODO: Error on unsupported message type
-		messageHandlers[message.type](message.payload);
+		messageHandlers[message.messageType](message.payload);
 	}
 
 	var AuthenticationRequest = function(username, password) {
