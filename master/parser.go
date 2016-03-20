@@ -8,12 +8,12 @@ import (
 	"github.com/djarek/btrfs-volume-manager/common/wsprotocol"
 )
 
-func marshalPayload(out *json.RawMessage, v interface{}) {
+func marshalPayload(out **json.RawMessage, v interface{}) {
 	buf, err := json.Marshal(v)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	*out = buf
+	*out = (*json.RawMessage)(&buf)
 }
 
 /*messageParser parses the received WebSocketMessage and dispatches appropriate
@@ -55,7 +55,7 @@ func onAuthenticationRequest(msg dtos.WebSocketMessage, connection *wsprotocol.C
 	if authErr == nil {
 		response.Result = "auth_ok"
 	}
-	marshalPayload(msg.Payload, response)
+	marshalPayload(&msg.Payload, response)
 	msg.Type = dtos.WSMsgAuthenticationResponse
 
 	channel, err := connection.SendAsync(msg)
