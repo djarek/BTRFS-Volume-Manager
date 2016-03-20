@@ -64,8 +64,8 @@ func (repo UsersRepository) FindUsersByRegistrationDate(
 // processes.
 func startDB() {
 	log.Println("Connecting to Database")
-	// var err error
-	session, err := mgo.Dial("localhost")
+	var err error
+	session, err = mgo.Dial("localhost")
 	if err != nil {
 		panic(err)
 	}
