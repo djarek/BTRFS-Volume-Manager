@@ -147,7 +147,7 @@ func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
 		c.enqueueOutputMessage(outputMessage{
 			channel:     nil,
-			payload:     websocket.FormatCloseMessage(websocket.CloseNormalClosure, "CLOSE"),
+			payload:     websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 			messageType: websocket.CloseMessage,
 		})
 	})
@@ -189,7 +189,7 @@ func (c *Connection) writerLoop() {
 	for {
 		select {
 		case <-pingTicker.C:
-			err := c.internalWrite(websocket.PingMessage, []byte("lol"))
+			err := c.internalWrite(websocket.PingMessage, []byte{})
 			if err != nil {
 				log.Println("Error when sending websocket ping: " + err.Error())
 				return
@@ -218,7 +218,9 @@ func (c *Connection) flushRemainingTasks() {
 
 func (c *Connection) internalClose() {
 	session := c.GetSession()
-	session.ReleaseConnection(c)
+	if session != nil {
+		session.ReleaseConnection(c)
+	}
 
 	close(c.writeChannel)
 	c.flushRemainingTasks()
