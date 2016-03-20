@@ -37,9 +37,9 @@
 	nextRequestId = 0;
 
 	var WebSocketMessage = function(payloadObject) {
-			this.type = payloadObject.getCommandType();
-			this.requestID = nextRequestId++;
-			this.payload = payloadObject;
+		this.type = payloadObject.getCommandType();
+		this.requestID = nextRequestId++;
+		this.payload = payloadObject;
 	};
 
 	function onAuthenticationResponse(payloadObject) {
@@ -62,11 +62,11 @@
 	}
 
 	var AuthenticationRequest = function(username, password) {
-	    this.username = username;
-	    this.password = password;
-	    this.getCommandType = function() {
-				return 1;
-			}
+		this.username = username;
+		this.password = password;
+	  this.getCommandType = function() {
+			return 1;
+		}
 	};
 
 	(function()
@@ -79,8 +79,8 @@
 				container = document.getElementById("container");
 
 		socket.onmessage = function (e) {
-					var msg = JSON.parse(e.data);
-					dispatchMessageHandler(msg);
+			var msg = JSON.parse(e.data);
+			dispatchMessageHandler(msg);
 		};
 
 		function clickEnter()
