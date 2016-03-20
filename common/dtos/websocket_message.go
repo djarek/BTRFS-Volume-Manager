@@ -22,9 +22,9 @@ const (
 //WebSocketMessage represents a message received from a client or
 //ready to be sent to it
 type WebSocketMessage struct {
-	Type      WebSocketMessageType `json:"type"`
-	RequestID int64                `json:"requestID"`
-	Payload   *json.RawMessage     `json:"payload"`
+	MessageType WebSocketMessageType `json:"messageType"`
+	RequestID   int64                `json:"requestID"`
+	Payload     *json.RawMessage     `json:"payload"`
 }
 
 //WebSocketMessageMarshaller allows conversion from byte slices to WSMessage structs

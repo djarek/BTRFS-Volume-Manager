@@ -24,7 +24,7 @@ type messageParser struct{}
 /*ParseRecvMsg parses the received WebSocketMessage and dispatches appropriate
 handler functions. */
 func (mp messageParser) ParseRecvMsg(msg dtos.WebSocketMessage, connection *wsprotocol.Connection) (err error) {
-	switch msg.Type {
+	switch msg.MessageType {
 	case dtos.WSMsgAuthenticationRequest:
 		{
 			s := connection.GetSession()
@@ -56,7 +56,7 @@ func onAuthenticationRequest(msg dtos.WebSocketMessage, connection *wsprotocol.C
 		response.Result = "auth_ok"
 	}
 	marshalPayload(&msg.Payload, response)
-	msg.Type = dtos.WSMsgAuthenticationResponse
+	msg.MessageType = dtos.WSMsgAuthenticationResponse
 
 	channel, err := connection.SendAsync(msg)
 	if err != nil && authErr == nil {
