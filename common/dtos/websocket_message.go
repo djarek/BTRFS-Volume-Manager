@@ -1,22 +1,25 @@
 package dtos
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"log"
+)
 
 //WebSocketMessageType represents the type of the message.
 type WebSocketMessageType int32
 
 const (
-	//WSMsgError indicates this WebSocketMessage contains an error object
-	WSMsgError WebSocketMessageType = iota
 	/*WSMsgAuthenticationRequest indicates this WebSocketMessage contains an
 	AuthenticationRequest*/
-	WSMsgAuthenticationRequest
+	WSMsgAuthenticationRequest = iota + 1
 )
 
 const (
+	//WSMsgError indicates this WebSocketMessage contains an error object
+	WSMsgError WebSocketMessageType = iota + 10000
 	/*WSMsgAuthenticationResponse indicates this WebSocketMessage contains an
 	AuthenticationResponse*/
-	WSMsgAuthenticationResponse WebSocketMessageType = iota + 10001
+	WSMsgAuthenticationResponse
 )
 
 //WebSocketMessage represents a message received from a client or
@@ -59,4 +62,34 @@ type AuthenticationRequest struct {
 authentication succeeded or failed*/
 type AuthenticationResponse struct {
 	Result string `json:"result"`
+}
+
+/*Error represents an error that occured in the higher layers and is supposed
+to be sent to the client. The subsystem string indicates which entity emitted
+the error.*/
+type Error struct {
+	Subsystem string `json:"subsystem"`
+	Details   string `json:"details"`
+}
+
+func (e Error) Error() string {
+	return e.Subsystem + " error: " + e.Details
+}
+
+/*NewErrorMsg constructs a WebSocketMessage from an error message*/
+func NewErrorMsg(subsystem string, err error, requestID int64) WebSocketMessage {
+	errStruct := Error{
+		Subsystem: subsystem,
+		Details:   err.Error(),
+	}
+	buf, err := json.Marshal(errStruct)
+	if err != nil {
+		log.Fatalln("Marshalling error message failed: " + err.Error())
+	}
+
+	return WebSocketMessage{
+		MessageType: WSMsgError,
+		Payload:     (*json.RawMessage)(&buf),
+		RequestID:   requestID,
+	}
 }

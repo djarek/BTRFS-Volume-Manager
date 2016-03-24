@@ -42,7 +42,14 @@
 		this.payload = payloadObject;
 	};
 
-	function onAuthenticationResponse(payloadObject) {
+	function onErrorMsg(payloadObject, requestID) {
+		//TODO: Notify the user about the error and cancel request if applicable
+		/*payloadObject.ErrorMsg
+			payloadObject.Subsystem
+		*/
+	}
+
+	function onAuthenticationResponse(payloadObject, requestID) {
 		if (payloadObject.result == "auth_ok") {
 			//TODO: Handle session tokens
 			location.href = window.location.href.concat("content.html")
@@ -53,12 +60,13 @@
 	}
 
 	var messageHandlers = {
+		10000 : onErrorMsg
 		10001 : onAuthenticationResponse
 	};
 	function dispatchMessageHandler(message) {
 		//TODO: verify requestID
 		//TODO: Error on unsupported message type
-		messageHandlers[message.messageType](message.payload);
+		messageHandlers[message.messageType](message.payload, message.requestID);
 	}
 
 	var AuthenticationRequest = function(username, password) {
