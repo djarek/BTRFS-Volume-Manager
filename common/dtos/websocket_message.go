@@ -72,6 +72,10 @@ type Error struct {
 	Details   string `json:"details"`
 }
 
+func (e Error) Error() string {
+	return e.Subsystem + " error: " + e.Details
+}
+
 /*NewErrorMsg constructs a WebSocketMessage from an error message*/
 func NewErrorMsg(subsystem string, err error, requestID int64) WebSocketMessage {
 	errStruct := Error{
