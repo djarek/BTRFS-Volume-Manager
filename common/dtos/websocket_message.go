@@ -79,24 +79,6 @@ func (e Error) Error() string {
 	return e.Subsystem + " error: " + e.Details
 }
 
-/*NewErrorMsg constructs a WebSocketMessage from an error message*/
-func NewErrorMsg(subsystem string, err error, requestID int64) WebSocketMessage {
-	errStruct := Error{
-		Subsystem: subsystem,
-		Details:   err.Error(),
-	}
-	buf, err := json.Marshal(errStruct)
-	if err != nil {
-		log.Fatalln("Marshalling error message failed: " + err.Error())
-	}
-
-	return WebSocketMessage{
-		MessageType: WSMsgError,
-		Payload:     (*json.RawMessage)(&buf),
-		RequestID:   requestID,
-	}
-}
-
 var typeMap = make(map[WebSocketMessageType]reflect.Type)
 var reversedTypeMap = make(map[reflect.Type]WebSocketMessageType)
 
