@@ -79,8 +79,8 @@ func (e Error) Error() string {
 	return e.Subsystem + " error: " + e.Details
 }
 
-var typeMap = make(map[WebSocketMessageType]reflect.Type)
-var reversedTypeMap = make(map[reflect.Type]WebSocketMessageType)
+var unmarshallingTypeMap = make(map[WebSocketMessageType]reflect.Type)
+var marshallingTypeMap = make(map[reflect.Type]WebSocketMessageType)
 
 func init() {
 	RegisterMessageType(WSMsgAuthenticationRequest, AuthenticationRequest{})
@@ -92,23 +92,39 @@ func init() {
 This function is NOT thread-safe and should be preferably called in the init()
 function of a higher-level package.*/
 func RegisterMessageType(typeID WebSocketMessageType, payload interface{}) {
-	_, found := typeMap[typeID]
-	if found {
-		log.Panicf("Type(ID: %d, %v) already registered!  ", typeID, payload)
-	}
 	t := reflect.ValueOf(payload).Type()
-	typeMap[typeID] = t
-	reversedTypeMap[t] = typeID
+	_, found1 := unmarshallingTypeMap[typeID]
+	_, found2 := marshallingTypeMap[t]
+	if found1 || found2 {
+		log.Panicf("Type(ID: %d, %v) already registered!", typeID, payload)
+	}
+
+	unmarshallingTypeMap[typeID] = t
+	marshallingTypeMap[t] = typeID
+}
+
+func getMsgTypeID(payload interface{}) (msgType WebSocketMessageType) {
+	t := reflect.ValueOf(payload).Type()
+	msgType, found := marshallingTypeMap[t]
+	if !found {
+		log.Panicf("Unknown payload type (payload:%s)", t.String())
+	}
+	return
+}
+
+func newPayloadType(msgType WebSocketMessageType) (payload interface{}, err error) {
+	payloadType, found := unmarshallingTypeMap[msgType]
+	if !found {
+		return nil, errors.New("Unknown message type: " + strconv.Itoa(int(msgType)))
+	}
+	payload = reflect.New(payloadType).Interface()
+	return
 }
 
 /*NewWebSocketMessage constructs a WebSocketMessage and sets the appropriate
 messageType. If the payload type is not in the typemap the function will panic.*/
 func NewWebSocketMessage(requestID int64, p interface{}) WebSocketMessage {
-	v := reflect.ValueOf(p)
-	msgType, found := reversedTypeMap[v.Type()]
-	if !found {
-		log.Panicf("Unknown payload type (payload:%s)", v.Type().String())
-	}
+	msgType := getMsgTypeID(p)
 	return WebSocketMessage{
 		MessageType: msgType,
 		RequestID:   requestID,
@@ -131,10 +147,9 @@ func (w *WebSocketMessage) UnmarshalJSON(data []byte) error {
 
 	w.RequestID = temp.RequestID
 	w.MessageType = temp.MessageType
-	payloadType, found := typeMap[temp.MessageType]
-	if !found {
-		return errors.New("Unknown message type: " + strconv.Itoa(int(w.MessageType)))
+	w.Payload, err = newPayloadType(temp.MessageType)
+	if err != nil {
+		return err
 	}
-	w.Payload = reflect.New(payloadType).Interface()
 	return json.Unmarshal([]byte(*temp.PayloadData), w.Payload)
 }
