@@ -1,20 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/wsprotocol"
 )
-
-func marshalPayload(out **json.RawMessage, v interface{}) {
-	buf, err := json.Marshal(v)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	*out = (*json.RawMessage)(&buf)
-}
 
 /*messageParser parses the received WebSocketMessage and dispatches appropriate
 handler functions. Implements the RecvMessageParser interface.
@@ -41,24 +32,23 @@ func (mp messageParser) ParseRecvMsg(msg dtos.WebSocketMessage, connection *wspr
 var auth = authenticator{}
 
 func onAuthenticationRequest(msg dtos.WebSocketMessage, connection *wsprotocol.Connection) {
-	var credentials dtos.AuthenticationRequest
-	err := json.Unmarshal(*msg.Payload, &credentials)
-	if err != nil {
-		log.Println("Error when unmarshalling credentials: " + err.Error())
+	credentials, ok := msg.Payload.(*dtos.AuthenticationRequest)
+	if !ok {
+		log.Printf("Invalid payload type (typeID:%d, payload:%v)\n", msg.MessageType,
+			msg.Payload)
 		return
 	}
+
 	response := dtos.AuthenticationResponse{
 		Result: "auth_wrong",
 	}
-
-	authErr := auth.Authenticate(credentials)
+	authErr := auth.Authenticate(*credentials)
 	if authErr == nil {
 		response.Result = "auth_ok"
 	}
-	marshalPayload(&msg.Payload, response)
-	msg.MessageType = dtos.WSMsgAuthenticationResponse
 
-	channel, err := connection.SendAsync(msg)
+	responseMsg := dtos.NewWebSocketMessage(msg.RequestID, response)
+	channel, err := connection.SendAsync(responseMsg)
 	if err != nil && authErr == nil {
 		go func() {
 			err := <-channel
