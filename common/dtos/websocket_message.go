@@ -30,27 +30,33 @@ const (
 type WebSocketMessage struct {
 	MessageType WebSocketMessageType `json:"messageType"`
 	RequestID   int64                `json:"requestID"`
-	Payload     interface{}          `json:"payload"`
+	Payload     PayloadType          `json:"payload"`
+}
+
+/*PayloadType represents a type that is a WebSocketMessage payload. The method
+is used to provide some type safety. A pointer receiver is recommended.*/
+type PayloadType interface {
+	isPayload()
 }
 
 //WebSocketMessageMarshaller allows conversion from byte slices to WSMessage structs
 //and vice versa.
 type WebSocketMessageMarshaller interface {
-	Marshall(WebSocketMessage) ([]byte, error)
-	Unmarshall([]byte) (WebSocketMessage, error)
+	Marshal(WebSocketMessage) ([]byte, error)
+	Unmarshal([]byte) (WebSocketMessage, error)
 }
 
 //JSONMessageMarshaller is the default WebSocketMessageMarshaller - uses JSON as the target format
 type JSONMessageMarshaller struct{}
 
-//Marshall encodes a WebSocketMessage as a JSON object
-func (j JSONMessageMarshaller) Marshall(msg WebSocketMessage) (buf []byte, err error) {
+//Marshal encodes a WebSocketMessage as a JSON object
+func (j JSONMessageMarshaller) Marshal(msg WebSocketMessage) (buf []byte, err error) {
 	buf, err = json.Marshal(msg)
 	return
 }
 
-//Unmarshall decodes a JSON object to a WebSocketMessage
-func (JSONMessageMarshaller) Unmarshall(buf []byte) (msg WebSocketMessage, err error) {
+//Unmarshal decodes a JSON object to a WebSocketMessage
+func (JSONMessageMarshaller) Unmarshal(buf []byte) (msg WebSocketMessage, err error) {
 	err = json.Unmarshal(buf, &msg)
 	return
 }
@@ -61,11 +67,15 @@ type AuthenticationRequest struct {
 	Password string `json:"password"`
 }
 
+func (*AuthenticationRequest) isPayload() {}
+
 /*AuthenticationResponse represents a response to the client indicating whether
 authentication succeeded or failed*/
 type AuthenticationResponse struct {
 	Result string `json:"result"`
 }
+
+func (*AuthenticationResponse) isPayload() {}
 
 /*Error represents an error that occured in the higher layers and is supposed
 to be sent to the client. The subsystem string indicates which entity emitted
@@ -92,7 +102,8 @@ func init() {
 This function is NOT thread-safe and should be preferably called in the init()
 function of a higher-level package.*/
 func RegisterMessageType(typeID WebSocketMessageType, payload interface{}) {
-	t := reflect.ValueOf(payload).Type()
+	v := reflect.ValueOf(payload)
+	t := reflect.Indirect(v).Type()
 	_, found1 := unmarshallingTypeMap[typeID]
 	_, found2 := marshallingTypeMap[t]
 	if found1 || found2 {
@@ -104,7 +115,8 @@ func RegisterMessageType(typeID WebSocketMessageType, payload interface{}) {
 }
 
 func getMsgTypeID(payload interface{}) (msgType WebSocketMessageType) {
-	t := reflect.ValueOf(payload).Type()
+	v := reflect.Indirect(reflect.ValueOf(payload))
+	t := v.Type()
 	msgType, found := marshallingTypeMap[t]
 	if !found {
 		log.Panicf("Unknown payload type (payload:%s)", t.String())
@@ -112,18 +124,19 @@ func getMsgTypeID(payload interface{}) (msgType WebSocketMessageType) {
 	return
 }
 
-func newPayloadType(msgType WebSocketMessageType) (payload interface{}, err error) {
+func newPayloadType(msgType WebSocketMessageType) (payload PayloadType, err error) {
 	payloadType, found := unmarshallingTypeMap[msgType]
 	if !found {
 		return nil, errors.New("Unknown message type: " + strconv.Itoa(int(msgType)))
 	}
-	payload = reflect.New(payloadType).Interface()
+
+	payload = reflect.New(payloadType).Interface().(PayloadType)
 	return
 }
 
 /*NewWebSocketMessage constructs a WebSocketMessage and sets the appropriate
 messageType. If the payload type is not in the typemap the function will panic.*/
-func NewWebSocketMessage(requestID int64, p interface{}) WebSocketMessage {
+func NewWebSocketMessage(requestID int64, p PayloadType) WebSocketMessage {
 	msgType := getMsgTypeID(p)
 	return WebSocketMessage{
 		MessageType: msgType,

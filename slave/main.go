@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/router"
 	"github.com/djarek/btrfs-volume-manager/common/wsprotocol"
 	_ "github.com/djarek/btrfs-volume-manager/slave/osinterface"
 )
@@ -19,7 +20,9 @@ const (
 )
 
 func main() {
-	conn, err := wsprotocol.DefaultDialer.Dial(masterControlURL, messageParser{})
+	r := router.New()
+	authController{}.ExportHandlers(r)
+	conn, err := wsprotocol.DefaultDialer.Dial(masterControlURL, r)
 	if err != nil {
 		log.Fatalln(err)
 	}

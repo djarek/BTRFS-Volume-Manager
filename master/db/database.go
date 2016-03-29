@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"log"
@@ -7,6 +7,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/djarek/btrfs-volume-manager/master/models"
 )
 
 const dbName = "btrfs"
@@ -16,7 +18,7 @@ var (
 	connected = false
 	session   *mgo.Session
 	db        *mgo.Database
-	usersRepo UsersRepository
+	UsersRepo UsersRepository
 )
 
 // UsersRepository is a collection of users
@@ -26,43 +28,15 @@ type UsersRepository struct {
 
 // FindUserByUsername provides searching for user by username.
 // It returns one User and error.
-func (repo UsersRepository) FindUserByUsername(username string) (User, error) {
-	result := User{}
+func (repo UsersRepository) FindUserByUsername(username string) (models.User, error) {
+	result := models.User{}
 	err := repo.coll.Find(bson.M{"username": username}).One(&result)
-	return result, err
-}
-
-// FindUsersByFirstName provides searching for users by first name.
-// It returns array of Users and error.
-func (repo UsersRepository) FindUsersByFirstName(
-	firstName string) ([]User, error) {
-	var result []User
-	err := repo.coll.Find(bson.M{"firstName": firstName}).All(&result)
-	return result, err
-}
-
-// FindUsersByLastName provides searching for users by last name.
-// It returns array of Users and error.
-func (repo UsersRepository) FindUsersByLastName(
-	lastName string) ([]User, error) {
-	var result []User
-	err := repo.coll.Find(bson.M{"lastName": lastName}).All(&result)
-	return result, err
-}
-
-// FindUsersByRegistrationDate provides sarching for users by registration date.
-// It returns array of Users and error.
-func (repo UsersRepository) FindUsersByRegistrationDate(
-	registrationDate time.Time) ([]User, error) {
-	var result []User
-	err := repo.coll.Find(bson.M{
-		"registrationDate": registrationDate}).All(&result)
 	return result, err
 }
 
 // Function that connects database and basically all necessary initialization
 // processes.
-func startDB() {
+func StartDB() {
 	log.Println("Connecting to Database")
 	var err error
 	session, err = mgo.Dial("localhost")
@@ -72,7 +46,7 @@ func startDB() {
 	db = session.DB(dbName)
 	connected = true
 	session.SetMode(mgo.Monotonic, true)
-	usersRepo.coll = session.DB(dbName).C(usersCollectionName)
+	UsersRepo.coll = session.DB(dbName).C(usersCollectionName)
 
 	// Unique index
 	index := mgo.Index{
@@ -82,23 +56,22 @@ func startDB() {
 		Background: true,
 		Sparse:     true,
 	}
-	err = usersRepo.coll.EnsureIndex(index)
+	err = UsersRepo.coll.EnsureIndex(index)
 	if err != nil {
 		panic(err)
 	}
 
 	// Initialize data base if it is empty
-	var results []User
-	err = usersRepo.coll.Find(nil).All(&results)
+	var results []models.User
+	err = UsersRepo.coll.Find(nil).All(&results)
 	if len(results) == 0 {
 		initializeDB()
 	}
 }
 
 // Function that closes database connection.
-func stopDB() {
+func StopDB() {
 	log.Println("Closing databse connection")
-	log.Println(session)
 	session.Close()
 	connected = false
 }
@@ -112,8 +85,8 @@ func initializeDB() {
 	if err != nil {
 		panic(err)
 	}
-	err = usersRepo.coll.Insert(
-		&User{
+	err = UsersRepo.coll.Insert(
+		&models.User{
 			ID:               id,
 			Username:         "admin",
 			HashedPassword:   string(hashedPassword),
@@ -127,7 +100,7 @@ func initializeDB() {
 }
 
 // Funtion that drops entire database.
-func dropDB() {
+func DropDB() {
 	err := session.DB(dbName).DropDatabase()
 	if err != nil {
 		panic(err)

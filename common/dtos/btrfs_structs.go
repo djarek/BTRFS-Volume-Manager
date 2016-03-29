@@ -9,6 +9,7 @@ type StorageServerID int32
 //VolumeID represents the identifier field of a BtrfsVolume entry
 type VolumeID int32
 
+//UUIDType is the string that contains the UUID of a filesystem entity
 type UUIDType string
 
 //BlockDevice represents a block device retrieved by blkid probe
