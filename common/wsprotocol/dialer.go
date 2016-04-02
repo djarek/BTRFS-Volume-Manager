@@ -14,12 +14,13 @@ type Dialer struct {
 }
 
 //Dial connects to a websocket endpoint and creates a Connection
-func (d Dialer) Dial(url string, p RecvMessageParser) (*Connection, error) {
+func (d Dialer) Dial(url string, r Router) (*Connection, error) {
 	wsConn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return nil, err
 	}
-	conn := newConnection(wsConn, d.m, p)
+	conn, recvChannel := newConnection(wsConn, d.m)
+	r.OnNewConnection(conn, recvChannel)
 	go conn.serve()
 	return conn, nil
 }

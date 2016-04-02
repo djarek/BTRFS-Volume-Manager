@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -10,51 +9,37 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/djarek/btrfs-volume-manager/master/authentication"
+	"github.com/djarek/btrfs-volume-manager/master/db"
+
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/router"
 	"github.com/djarek/btrfs-volume-manager/common/wsprotocol"
-	"github.com/gorilla/websocket"
-	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	upgrader = websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-	connections map[*websocket.Conn]bool
-)
-
-type authenticator struct{}
-
-func (a authenticator) Authenticate(credentials dtos.AuthenticationRequest) error {
-	usr, err := usersRepo.FindUserByUsername(credentials.Username)
-	if err != nil {
-		return errors.New("No such user")
-	}
-	err = bcrypt.CompareHashAndPassword(
-		[]byte(usr.HashedPassword), []byte(credentials.Password))
-	if err != nil {
-		return errors.New("Wrong passsword")
-	}
-	return nil
+func setupAuth(r *router.Router) {
+	authService := authentication.NewService(db.UsersRepo)
+	authCtrl := authentication.NewController(authService)
+	authCtrl.ExportHandlers(r)
 }
 
 func main() {
-	startDB()
-	defer stopDB()
+	db.StartDB()
+	defer db.StopDB()
 
 	port := flag.Int("port", 8080, "port to serve on")
 	dir := flag.String("directory", "views/", "directory of views")
 	flag.Parse()
-	connections = make(map[*websocket.Conn]bool)
 
 	fs := http.Dir(*dir)
 	fileHandler := http.FileServer(fs)
 	http.Handle("/", fileHandler)
 
-	connectionManager := wsprotocol.NewConnectionManager(
+	wsRouter := router.New()
+	setupAuth(wsRouter)
+	connectionManager := wsprotocol.NewConnectionUpgrader(
 		dtos.JSONMessageMarshaller{},
-		messageParser{})
+		wsRouter)
 	http.HandleFunc("/ws", connectionManager.HandleWSConnection)
 
 	log.Printf("Running on port %d\n", *port)

@@ -16,18 +16,19 @@ const (
 	writeTimeout              = 10 * time.Second
 	authenticationReadTimeout = writeTimeout
 	writeChannelSize          = 16
+	readChannelSize           = 16
 )
 
-var (
-	/*ErrSessionAlreadyAssigned indicates that the Connection already has
-	  a session assigned (authentication has already been performed)*/
-	ErrSessionAlreadyAssigned = errors.New("SessionContext already assigned.")
-)
+/*AsyncSender allows asynchronous sending of messages*/
+type AsyncSender interface {
+	SendAsync(msg dtos.WebSocketMessage) (<-chan error, error)
+}
 
-//RecvMessageParser specifies the type that is used to resolve received messages
-//into appropriate callbacks
-type RecvMessageParser interface {
-	ParseRecvMsg(dtos.WebSocketMessage, *Connection) error
+/*AsyncSenderCloser represents a type that allows asynchronous sending of
+messages and closing the connection.*/
+type AsyncSenderCloser interface {
+	AsyncSender
+	Close()
 }
 
 type outputMessage struct {
@@ -36,38 +37,29 @@ type outputMessage struct {
 	messageType int
 }
 
-//SessionContext represents the current user session
-type SessionContext interface {
-	ReleaseConnection(*Connection)
-}
-
 //Connection wraps the websocket connection
 type Connection struct {
 	wsConnection    *websocket.Conn
 	marshaller      dtos.WebSocketMessageMarshaller
-	parser          RecvMessageParser
 	onCloseCallback func()
 
-	sessionMtx sync.Mutex
-	session    SessionContext
-
 	writeChannel chan outputMessage
+	readChannel  chan dtos.WebSocketMessage
 	closeOnce    sync.Once
 }
 
 func newConnection(
 	wsConnection *websocket.Conn,
 	marshaller dtos.WebSocketMessageMarshaller,
-	parser RecvMessageParser,
-) *Connection {
+) (*Connection, <-chan dtos.WebSocketMessage) {
 
+	readChannel := make(chan dtos.WebSocketMessage, readChannelSize)
 	return &Connection{
 		wsConnection: wsConnection,
 		marshaller:   marshaller,
-		parser:       parser,
-		session:      nil,
 
-		writeChannel: make(chan outputMessage, writeChannelSize)}
+		readChannel:  readChannel,
+		writeChannel: make(chan outputMessage, writeChannelSize)}, readChannel
 }
 
 //serve launches the reading and writing loops for this websocket connection.
@@ -81,6 +73,7 @@ func (c *Connection) serve() {
 
 func (c *Connection) readerLoop() {
 	defer c.Close()
+	defer close(c.readChannel)
 	c.wsConnection.SetPongHandler(func(string) error {
 		c.wsConnection.SetReadDeadline(time.Now().Add(pongTimeout))
 		return nil
@@ -95,7 +88,7 @@ func (c *Connection) readerLoop() {
 	})
 
 	for {
-		msgType, msgBytes, err := c.wsConnection.ReadMessage()
+		_, msgBytes, err := c.wsConnection.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err,
 				websocket.CloseNormalClosure,
@@ -104,40 +97,16 @@ func (c *Connection) readerLoop() {
 			}
 			return
 		}
-		if msgType != websocket.TextMessage || len(msgBytes) == 0 {
-			return
-		}
 
-		websocketMsg, err := c.marshaller.Unmarshall(msgBytes)
+		websocketMsg, err := c.marshaller.Unmarshal(msgBytes)
 		if err != nil {
 			log.Println("Error when unmarshalling WebSocketMessage (received malformed data?): " + err.Error())
 			log.Println(msgBytes)
+			//TODO: send error to client
 			continue
 		}
-		c.parser.ParseRecvMsg(websocketMsg, c)
+		c.readChannel <- websocketMsg
 	}
-}
-
-//GetSession returns the current session in a thread-safe way
-func (c *Connection) GetSession() SessionContext {
-	c.sessionMtx.Lock()
-	c.sessionMtx.Unlock()
-
-	return c.session
-}
-
-/*SetSession sets the current session in a thread-safe way. If there is
-a session already set, the function will return an error.*/
-func (c *Connection) SetSession(s SessionContext) error {
-	c.sessionMtx.Lock()
-	defer c.sessionMtx.Unlock()
-
-	if c.session != nil {
-		return ErrSessionAlreadyAssigned
-	}
-
-	c.session = s
-	return nil
 }
 
 /*Close attempts to send a proper close to the client. If the connection
@@ -157,6 +126,9 @@ func (c *Connection) enqueueOutputMessage(msg outputMessage) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New("Connection closed")
+			if msg.channel != nil {
+				msg.channel <- err
+			}
 		}
 	}()
 	c.writeChannel <- msg
@@ -168,7 +140,7 @@ error is encountered or the message write has been enqueued. If an error is
 encountered during the network transfer, the error is passed through the
 returned channel. If there is no error, nil is sent on that channel*/
 func (c *Connection) SendAsync(msg dtos.WebSocketMessage) (<-chan error, error) {
-	msgBytes, err := c.marshaller.Marshall(msg)
+	msgBytes, err := c.marshaller.Marshal(msg)
 	if err != nil {
 		log.Println("Error when marshalling WebSocketMessage: " + err.Error())
 		return nil, err
@@ -217,11 +189,6 @@ func (c *Connection) flushRemainingTasks() {
 }
 
 func (c *Connection) internalClose() {
-	session := c.GetSession()
-	if session != nil {
-		session.ReleaseConnection(c)
-	}
-
 	close(c.writeChannel)
 	c.flushRemainingTasks()
 
