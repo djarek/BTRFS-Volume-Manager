@@ -28,7 +28,7 @@ func main() {
 	defer db.StopDB()
 
 	port := flag.Int("port", 8080, "port to serve on")
-	dir := flag.String("directory", "views/", "directory of views")
+	dir := flag.String("directory", "views/app/", "directory of views")
 	flag.Parse()
 
 	fs := http.Dir(*dir)

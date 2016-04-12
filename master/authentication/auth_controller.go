@@ -31,6 +31,7 @@ func (a *controller) onAuthenticationRequest(ctx *router.Context, msg dtos.WebSo
 	authErr := a.auth.Authenticate(*credentials)
 	if authErr == nil {
 		response.Result = "auth_ok"
+		response.UserDetails = credentials.Username
 	}
 
 	responseMsg := newWSMsg(msg.RequestID, &response)

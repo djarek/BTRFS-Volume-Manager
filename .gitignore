@@ -38,3 +38,6 @@ build
 .directory
 *.kdev4
 .kdev4
+
+#Bower directory
+bower_components

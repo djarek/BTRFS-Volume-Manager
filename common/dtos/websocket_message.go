@@ -72,7 +72,8 @@ func (*AuthenticationRequest) isPayload() {}
 /*AuthenticationResponse represents a response to the client indicating whether
 authentication succeeded or failed*/
 type AuthenticationResponse struct {
-	Result string `json:"result"`
+	Result      string `json:"result"`
+	UserDetails string `json:"userDetails"`
 }
 
 func (*AuthenticationResponse) isPayload() {}
