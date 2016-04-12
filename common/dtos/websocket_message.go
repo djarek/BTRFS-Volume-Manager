@@ -15,6 +15,10 @@ const (
 	/*WSMsgAuthenticationRequest indicates this WebSocketMessage contains an
 	AuthenticationRequest*/
 	WSMsgAuthenticationRequest = iota + 1
+	//WSMsgLogoutRequest indicates the client wants to close the session
+	WSMsgLogoutRequest
+	//WSMsgReauthenticationRequest indicates the client wants to reuse a previous session
+	WSMsgReauthenticationRequest
 )
 
 const (
@@ -72,10 +76,24 @@ func (*AuthenticationRequest) isPayload() {}
 /*AuthenticationResponse represents a response to the client indicating whether
 authentication succeeded or failed*/
 type AuthenticationResponse struct {
-	Result string `json:"result"`
+	Result      string `json:"result"`
+	UserDetails string `json:"userDetails"`
 }
 
 func (*AuthenticationResponse) isPayload() {}
+
+/*LogoutRequest represents a request from the client to end the session*/
+type LogoutRequest struct{}
+
+func (*LogoutRequest) isPayload() {}
+
+/*ReauthenticationRequest represents a request from the client to reuse a previous
+session.*/
+type ReauthenticationRequest struct {
+	Token string `json:"token"`
+}
+
+func (*ReauthenticationRequest) isPayload() {}
 
 /*Error represents an error that occured in the higher layers and is supposed
 to be sent to the client. The subsystem string indicates which entity emitted
@@ -95,6 +113,8 @@ var marshallingTypeMap = make(map[reflect.Type]WebSocketMessageType)
 func init() {
 	RegisterMessageType(WSMsgAuthenticationRequest, AuthenticationRequest{})
 	RegisterMessageType(WSMsgAuthenticationResponse, AuthenticationResponse{})
+	RegisterMessageType(WSMsgLogoutRequest, LogoutRequest{})
+	RegisterMessageType(WSMsgReauthenticationRequest, ReauthenticationRequest{})
 	RegisterMessageType(WSMsgError, Error{})
 }
 
