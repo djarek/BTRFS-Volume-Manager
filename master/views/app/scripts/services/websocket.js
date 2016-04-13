@@ -1,5 +1,6 @@
 angular.module("sbAdminApp")
-.service("WebsocketService", ["$rootScope", "$q", "Payloads", function($rootScope, $q, Payloads) {
+.service("WebsocketService", ["$rootScope", "$q", "Payloads",
+function($rootScope, $q, payloads) {
   var nextRequestId = 0;
   var socket = null;
   var connected = false;
@@ -72,7 +73,7 @@ angular.module("sbAdminApp")
     connected = false;
   };
 
-  this.payloads = Payloads;
+  this.payloads = payloads;
 
   this.reconnect();
 }]);

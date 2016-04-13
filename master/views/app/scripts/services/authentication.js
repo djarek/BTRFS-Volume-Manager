@@ -1,16 +1,21 @@
 angular.module("sbAdminApp")
-  .service("AuthenticationService", ["$rootScope", "$q", "WebsocketService", function($rootScope, $q, wsService) {
+  .service("AuthenticationService", ["$rootScope", "$q", "WebsocketService",
+  function($rootScope, $q, wsService) {
     var userDetails = null;
     $rootScope.$on("disconnected", function(event, data) {
       userDetails = null;
-      console.log("disconnected");
     })
+
     this.getUserDetails = function() {
       return userDetails;
     }
 
     this.sendLogoutRequest = function() {
       //TODO: Send logout request
+    }
+
+    this.isAuthenticated = function() {
+      return userDetails != null;
     }
 
     this.sendLoginRequest = function(username, password) {

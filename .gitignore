@@ -41,3 +41,6 @@ build
 
 #Bower directory
 bower_components
+
+#Node dependencies
+node_modules

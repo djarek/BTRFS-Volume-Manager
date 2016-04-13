@@ -103,7 +103,8 @@ angular
     })
       .state('login',{
         templateUrl:'views/pages/login.html',
-        url:'/login'
+        url:'/login',
+        allowUnauthenticated: true
     })
       .state('dashboard.chart',{
         templateUrl:'views/chart.html',
@@ -155,8 +156,20 @@ angular
    })
 
   }])
-  .run(["WebsocketService", function(wsService) {
+  .run(["$rootScope", "$state", "WebsocketService", "AuthenticationService",
+  function($rootScope, $state, wsService, authService) {
     window.onbeforeunload = function() {
       wsService.close();
     }
+
+    $rootScope.$on("$stateChangeStart", function(event, toState, toParams, fromState, fromParams) {
+      if (!toState.allowUnauthenticated && !authService.isAuthenticated()) {
+        $rootScope.toState = toState;
+        $rootScope.toStateParams = toParams;
+        $state.transitionTo("login");
+        event.preventDefault();
+      } else if (toState.name === "login") {
+        event.preventDefault();
+      }
+    });
   }]);
