@@ -168,7 +168,7 @@ angular
         $rootScope.toStateParams = toParams;
         $state.transitionTo("login");
         event.preventDefault();
-      } else if (toState.name === "login") {
+      } else if (toState.name === "login" && authService.isAuthenticated()) {
         event.preventDefault();
       }
     });
