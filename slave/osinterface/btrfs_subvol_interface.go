@@ -2,16 +2,19 @@ package osinterface
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 )
 
 const (
-	btrfsCmd = "btrfs"
+	btrfsCmd       = "btrfs"
+	rootMountsPath = "/mnt"
 )
 
 var runBtrfsCommand = func(options ...string) (outputString string, err error) {
@@ -70,4 +73,39 @@ func ProbeSubVolumes(mountPath string) (subvols []dtos.BtrfsSubVolume, err error
 		subvols = append(subvols, subvol)
 	}
 	return
+}
+
+func runBtrfsSubvolumeCommand(vol dtos.BtrfsVolume, subvolRelativePath string, subCommand string) error {
+	mountPath, err := getBtrfsRootMount(vol)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(mountPath, subvolRelativePath)
+	_, err = runBtrfsCommand("subvolume", subCommand, path)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*CreateSubVolume attempts to create a subvolume at the specified path
+(relative to the volume root). If the volume's root cannot be mounted
+this function returns an error.*/
+func CreateSubVolume(vol dtos.BtrfsVolume, subvolRelativePath string) error {
+	err := runBtrfsSubvolumeCommand(vol, subvolRelativePath, "create")
+	if err != nil {
+		return errors.New("Unable to create subvolume: " + err.Error())
+	}
+	return nil
+}
+
+/*DeleteSubVolume attempts to create a subvolume at the specified path
+(relative to the volume root). If the volume's root cannot be mounted
+this function returns an error.*/
+func DeleteSubVolume(vol dtos.BtrfsVolume, subvolRelativePath string) error {
+	err := runBtrfsSubvolumeCommand(vol, subvolRelativePath, "delete")
+	if err != nil {
+		return errors.New("Unable to delete subvolume: " + err.Error())
+	}
+	return nil
 }

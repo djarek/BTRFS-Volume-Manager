@@ -18,7 +18,6 @@ import (
 const (
 	mTabFilePath   = "/proc/mounts"
 	setmntentFlags = "r"
-	btrfsDevType   = "btrfs"
 )
 
 var (
@@ -102,13 +101,14 @@ func probeMountPoints() ([]dtos.MountPoint, error) {
 
 var devMatcher = regexp.MustCompile("path (\\/dev\\/[a-zA-Z0-9\\/_]+)")
 
+/*ProbeBtrfsVolumes retrieves the list of all btrfs volumes present on this
+server.*/
 func ProbeBtrfsVolumes() (vols []dtos.BtrfsVolume, err error) {
 	output, err := runBtrfsCommand("filesystem", "show", "--all-devices")
 	if err != nil {
 		return
 	}
 	volBlocks := strings.Split(output, "Label:")
-
 	volBlocks = volBlocks[1:]
 	for _, volBlock := range volBlocks {
 		var volume dtos.BtrfsVolume
