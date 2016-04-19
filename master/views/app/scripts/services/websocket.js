@@ -121,7 +121,8 @@ angular.module('sbAdminApp')
 .service('Payloads', function() {
   var recvMessageTypes = {
     10000 : "Error",
-    10001 : "AuthenticationResponse"
+    10001 : "AuthenticationResponse",
+    10006 : "StorageServerListResponse",
   };
 
   this.isValid = function(msg, expected) {
@@ -147,5 +148,11 @@ angular.module('sbAdminApp')
       token: token,
       getMessageType: function() { return 3; }
     };
+  }
+
+  this.NewStorageServerListRequest = function() {
+    return {
+      getMessageType: function() { return 6; }
+    }
   }
 })

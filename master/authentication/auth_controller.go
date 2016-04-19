@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/request"
 	"github.com/djarek/btrfs-volume-manager/common/router"
 )
 
@@ -24,21 +25,21 @@ func (a *controller) ExportHandlers(adder router.HandlerAdder) {
 	adder.AddHandler(dtos.WSMsgReauthenticationRequest, a.onReauthenticationRequest)
 }
 
-func (a *controller) onLogoutRequest(ctx *router.Context, msg dtos.WebSocketMessage) {
+func (a *controller) onLogoutRequest(ctx *request.Context, msg dtos.WebSocketMessage) {
 	//TODO: clear session and close connection
-	ctx.Sender.Close()
+	ctx.Close()
 }
 
-func (a *controller) onReauthenticationRequest(ctx *router.Context, msg dtos.WebSocketMessage) {
+func (a *controller) onReauthenticationRequest(ctx *request.Context, msg dtos.WebSocketMessage) {
 	response := dtos.AuthenticationResponse{
 		Result: "auth_ok",
 	}
 	//TODO: session token validation
 	responseMsg := newWSMsg(msg.RequestID, &response)
-	ctx.Sender.SendAsync(responseMsg)
+	ctx.SendAsync(responseMsg)
 }
 
-func (a *controller) onAuthenticationRequest(ctx *router.Context, msg dtos.WebSocketMessage) {
+func (a *controller) onAuthenticationRequest(ctx *request.Context, msg dtos.WebSocketMessage) {
 	credentials := msg.Payload.(*dtos.AuthenticationRequest)
 
 	response := dtos.AuthenticationResponse{
@@ -51,6 +52,6 @@ func (a *controller) onAuthenticationRequest(ctx *router.Context, msg dtos.WebSo
 	}
 
 	responseMsg := newWSMsg(msg.RequestID, &response)
-	ctx.Sender.SendAsync(responseMsg)
+	ctx.SendAsync(responseMsg)
 	//TODO: Session creation
 }

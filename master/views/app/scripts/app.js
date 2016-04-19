@@ -22,7 +22,7 @@ angular
       events:true,
     });
 
-    $urlRouterProvider.otherwise('/login');
+    $urlRouterProvider.otherwise('/dashboard/home');
 
     $stateProvider
       .state('dashboard', {
@@ -149,8 +149,21 @@ angular
       .state('dashboard.grid',{
        templateUrl:'views/ui-elements/grid.html',
        url:'/grid'
-   })
-
+   });
+   $stateProvider.state('dashboard.serverlist', {
+     templateUrl: 'views/storage/serverlist.html',
+     controller: 'StorageListCtrl',
+     url:'/storage/serverlist',
+     resolve: {
+       loadCtrl: function($ocLazyLoad) {
+         return $ocLazyLoad.load({
+           name:'sbAdminApp',
+           files:['scripts/controllers/storagelist.js',
+           'scripts/services/storage.js']
+         })
+       }
+     }
+   });
   }])
   .run(["$rootScope", "$state", "WebsocketService", "AuthenticationService",
   function($rootScope, $state, wsService, authService) {
@@ -163,6 +176,7 @@ angular
         $rootScope.toState = toState;
         $rootScope.toStateParams = toParams;
 
+        console.log(!authService.isAuthRequestSent());
         if (authService.hasSessionCookie() && !authService.isAuthRequestSent()) {
           authService.sendReloginRequest().then(function() {
             $state.transitionTo($rootScope.toState, $rootScope.toStateParams);
@@ -175,8 +189,14 @@ angular
           $state.transitionTo("login");
         }
         event.preventDefault();
-      } else if (toState.name === "login" && authService.isAuthenticated()) {
-        event.preventDefault();
+      } else if (toState.name === "login") {
+        if (authService.isAuthenticated()) {
+          event.preventDefault();
+        } else if (authService.hasSessionCookie()) {
+          $state.transitionTo("dashboard.home");
+          event.preventDefault();
+        }
+
       }
     });
   }]);

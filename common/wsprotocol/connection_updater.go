@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/request"
 	"github.com/gorilla/websocket"
 )
 
@@ -17,7 +18,7 @@ var (
 
 /*Router handles incoming Messages*/
 type Router interface {
-	OnNewConnection(AsyncSenderCloser, <-chan dtos.WebSocketMessage)
+	OnNewConnection(request.AsyncSenderCloser, <-chan dtos.WebSocketMessage) *request.Context
 }
 
 /*ConnectionUpgrader upgrades an incomming HTTP connection to a websocket connection

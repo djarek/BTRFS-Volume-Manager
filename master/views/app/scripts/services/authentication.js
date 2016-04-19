@@ -30,7 +30,7 @@ angular.module("sbAdminApp")
     }
 
     this.hasSessionCookie = function() {
-      return $cookies.getObject(SESSION_COOKIE_NAME) != null
+      return $cookies.getObject(SESSION_COOKIE_NAME) != null;
     }
 
     this.sendReloginRequest = function() {
@@ -58,7 +58,9 @@ angular.module("sbAdminApp")
       return wsService.send(authReq, "AuthenticationResponse").then(function(msg) {
         if (msg.payload.result === "auth_ok") {
           userDetails = msg.payload.userDetails;
-          $cookies.putObject(SESSION_COOKIE_NAME, userDetails);
+          var expirationDate = new Date();
+          expirationDate.setDate(expirationDate.getDate() + 1);
+          $cookies.putObject(SESSION_COOKIE_NAME, userDetails, {'expires': expirationDate});
           return true;
         } else {
           authRequestSent = false;

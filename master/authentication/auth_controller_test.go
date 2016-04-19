@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
-	"github.com/djarek/btrfs-volume-manager/common/router"
+	"github.com/djarek/btrfs-volume-manager/common/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -14,9 +14,9 @@ type asyncSenderCloserMock struct {
 	mock.Mock
 }
 
-func (a *asyncSenderCloserMock) SendAsync(msg dtos.WebSocketMessage) (<-chan error, error) {
+func (a *asyncSenderCloserMock) SendAsync(msg dtos.WebSocketMessage) <-chan error {
 	args := a.Called(msg)
-	return args.Get(0).(<-chan error), args.Error(1)
+	return args.Get(0).(<-chan error)
 }
 
 func (a *asyncSenderCloserMock) Close() {
@@ -38,7 +38,7 @@ func TestOnAuthenticationRequestAuthSuccess(t *testing.T) {
 	ctrl := controller{
 		auth: aMock,
 	}
-	ctx := &router.Context{Sender: cMock}
+	ctx := &request.Context{AsyncSenderCloser: cMock}
 	authReq := dtos.AuthenticationRequest{}
 	msg := dtos.NewWebSocketMessage(0, &authReq)
 	respMsg := dtos.NewWebSocketMessage(0, &dtos.AuthenticationResponse{Result: "auth_ok"})
@@ -48,7 +48,7 @@ func TestOnAuthenticationRequestAuthSuccess(t *testing.T) {
 	}
 	var r <-chan error
 
-	cMock.On("SendAsync", respMsg).Return(r, nil)
+	cMock.On("SendAsync", respMsg).Return(r)
 	aMock.On("Authenticate", authReq).Return(nil)
 	ctrl.onAuthenticationRequest(ctx, msg)
 
@@ -62,7 +62,7 @@ func TestOnAuthenticationRequestAuthFailure(t *testing.T) {
 	ctrl := controller{
 		auth: aMock,
 	}
-	ctx := &router.Context{Sender: cMock}
+	ctx := &request.Context{AsyncSenderCloser: cMock}
 	authReq := dtos.AuthenticationRequest{}
 	msg := dtos.NewWebSocketMessage(0, &authReq)
 	respMsg := dtos.NewWebSocketMessage(0, &dtos.AuthenticationResponse{Result: "auth_wrong"})
@@ -73,7 +73,7 @@ func TestOnAuthenticationRequestAuthFailure(t *testing.T) {
 
 	var r <-chan error
 	aMock.On("Authenticate", authReq).Return(errors.New(""))
-	cMock.On("SendAsync", respMsg).Return(r, nil)
+	cMock.On("SendAsync", respMsg).Return(r)
 	ctrl.onAuthenticationRequest(ctx, msg)
 
 	cMock.AssertExpectations(t)
