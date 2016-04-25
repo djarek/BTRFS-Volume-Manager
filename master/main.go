@@ -11,6 +11,7 @@ import (
 
 	"github.com/djarek/btrfs-volume-manager/master/authentication"
 	"github.com/djarek/btrfs-volume-manager/master/db"
+	"github.com/djarek/btrfs-volume-manager/master/storageservers"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/router"
@@ -21,6 +22,12 @@ func setupAuth(r *router.Router) {
 	authService := authentication.NewService(db.UsersRepo)
 	authCtrl := authentication.NewController(authService)
 	authCtrl.ExportHandlers(r)
+}
+
+func setupServerTracker(r *router.Router) {
+	tracker := storageservers.NewTracker()
+	serverController := storageservers.NewController(tracker)
+	serverController.ExportHandlers(r)
 }
 
 func main() {
@@ -37,6 +44,7 @@ func main() {
 
 	wsRouter := router.New()
 	setupAuth(wsRouter)
+	setupServerTracker(wsRouter)
 	connectionManager := wsprotocol.NewConnectionUpgrader(
 		dtos.JSONMessageMarshaller{},
 		wsRouter)

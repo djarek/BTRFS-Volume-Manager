@@ -19,18 +19,6 @@ const (
 	readChannelSize           = 16
 )
 
-/*AsyncSender allows asynchronous sending of messages*/
-type AsyncSender interface {
-	SendAsync(msg dtos.WebSocketMessage) (<-chan error, error)
-}
-
-/*AsyncSenderCloser represents a type that allows asynchronous sending of
-messages and closing the connection.*/
-type AsyncSenderCloser interface {
-	AsyncSender
-	Close()
-}
-
 type outputMessage struct {
 	channel     chan<- error
 	payload     []byte
@@ -139,18 +127,25 @@ func (c *Connection) enqueueOutputMessage(msg outputMessage) (err error) {
 error is encountered or the message write has been enqueued. If an error is
 encountered during the network transfer, the error is passed through the
 returned channel. If there is no error, nil is sent on that channel*/
-func (c *Connection) SendAsync(msg dtos.WebSocketMessage) (<-chan error, error) {
+func (c *Connection) SendAsync(msg dtos.WebSocketMessage) (channel <-chan error) {
 	msgBytes, err := c.marshaller.Marshal(msg)
+	wchannel := make(chan error, 1)
+	channel = wchannel
 	if err != nil {
 		log.Println("Error when marshalling WebSocketMessage: " + err.Error())
-		return nil, err
+		wchannel <- err
+		return
 	}
-	channel := make(chan error, 1)
-	return channel, c.enqueueOutputMessage(outputMessage{
-		channel:     channel,
+
+	err = c.enqueueOutputMessage(outputMessage{
+		channel:     wchannel,
 		payload:     msgBytes,
 		messageType: websocket.TextMessage,
 	})
+	if err != nil {
+		wchannel <- err
+	}
+	return
 }
 
 func (c *Connection) writerLoop() {

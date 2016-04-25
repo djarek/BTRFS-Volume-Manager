@@ -68,8 +68,14 @@
     <body>
 
     <div ng-app="sbAdminApp">
-
+      <div ng-show="errorMsg == null">
         <div ui-view></div>
+      </div>
+      <div ng-hide="errorMsg == null">
+        <div class="alert alert-danger">
+            {{errorMsg}}
+        </div>
+      </div>
 
     </div>
 

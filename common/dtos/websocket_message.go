@@ -11,23 +11,42 @@ import (
 //WebSocketMessageType represents the type of the message.
 type WebSocketMessageType int32
 
+//WSMsgRequests MessageType values
 const (
-	/*WSMsgAuthenticationRequest indicates this WebSocketMessage contains an
-	AuthenticationRequest*/
-	WSMsgAuthenticationRequest = iota + 1
-	//WSMsgLogoutRequest indicates the client wants to close the session
-	WSMsgLogoutRequest
-	//WSMsgReauthenticationRequest indicates the client wants to reuse a previous session
-	WSMsgReauthenticationRequest
+	WSMsgAuthenticationRequest            = 1
+	WSMsgLogoutRequest                    = 2
+	WSMsgReauthenticationRequest          = 3
+	WSMsgStorageServerRegistrationRequest = 4
+	WSMsgBlockDeviceRescanRequest         = 5
+	WSMsgStorageServerListRequest         = 6
 )
 
+//WSMsgResponse MessageType values
 const (
-	//WSMsgError indicates this WebSocketMessage contains an error object
-	WSMsgError WebSocketMessageType = iota + 10000
-	/*WSMsgAuthenticationResponse indicates this WebSocketMessage contains an
-	AuthenticationResponse*/
-	WSMsgAuthenticationResponse
+	WSMsgError                             = 10000
+	WSMsgAuthenticationResponse            = 10001
+	WSMsgStorageServerRegistrationResponse = 10004
+	WSMsgBlockDeviceRescanResponse         = 10005
+	WSMsgStorageServerListResponse         = 10006
 )
+
+func init() {
+	RegisterMessageType(WSMsgAuthenticationRequest, AuthenticationRequest{})
+	RegisterMessageType(WSMsgAuthenticationResponse, AuthenticationResponse{})
+	RegisterMessageType(WSMsgLogoutRequest, LogoutRequest{})
+	RegisterMessageType(WSMsgReauthenticationRequest, ReauthenticationRequest{})
+
+	RegisterMessageType(WSMsgStorageServerRegistrationRequest, StorageServerRegistrationRequest{})
+	RegisterMessageType(WSMsgStorageServerRegistrationResponse, StorageServerRegistrationResponse{})
+
+	RegisterMessageType(WSMsgBlockDeviceRescanRequest, BlockDeviceRescanRequest{})
+	RegisterMessageType(WSMsgBlockDeviceRescanResponse, BlockDeviceRescanResponse{})
+
+	RegisterMessageType(WSMsgStorageServerListRequest, StorageServerListRequest{})
+	RegisterMessageType(WSMsgStorageServerListResponse, StorageServerListResponse{})
+
+	RegisterMessageType(WSMsgError, Error{})
+}
 
 //WebSocketMessage represents a message received from a client or
 //ready to be sent to it
@@ -95,6 +114,53 @@ type ReauthenticationRequest struct {
 
 func (*ReauthenticationRequest) isPayload() {}
 
+/*StorageServerRegistrationRequest represents a request from a storage server to
+register it in the server tracker*/
+type StorageServerRegistrationRequest struct {
+	ServerName string `json:"serverName"`
+}
+
+func (*StorageServerRegistrationRequest) isPayload() {}
+
+/*StorageServerRegistrationResponse represents a request from a storage server to
+register it in the server tracker*/
+type StorageServerRegistrationResponse struct {
+	AssignedID StorageServerID `json:"assignedID"`
+}
+
+func (*StorageServerRegistrationResponse) isPayload() {}
+
+/*BlockDeviceRescanRequest represents a request to the slave to perform a scan
+of block devices in the system*/
+type BlockDeviceRescanRequest struct {
+	ServerID StorageServerID `json:"serverID"`
+}
+
+func (*BlockDeviceRescanRequest) isPayload() {}
+
+/*BlockDeviceRescanResponse represents a response from the slave containing  a list
+of all block devices present in the system*/
+type BlockDeviceRescanResponse struct {
+	BlockDevices []BlockDevice `json:"blockDevices"`
+}
+
+func (*BlockDeviceRescanResponse) isPayload() {}
+
+/*StorageServerListRequest represents a request from the client to retrieve a list of
+all storage servers.*/
+type StorageServerListRequest struct {
+}
+
+func (*StorageServerListRequest) isPayload() {}
+
+/*StorageServerListResponse represents a response to the client with the list of
+all storage servers.*/
+type StorageServerListResponse struct {
+	Servers []StorageServer `json:"servers"`
+}
+
+func (*StorageServerListResponse) isPayload() {}
+
 /*Error represents an error that occured in the higher layers and is supposed
 to be sent to the client. The subsystem string indicates which entity emitted
 the error.*/
@@ -103,20 +169,14 @@ type Error struct {
 	Details   string `json:"details"`
 }
 
+func (*Error) isPayload() {}
+
 func (e Error) Error() string {
 	return e.Subsystem + " error: " + e.Details
 }
 
 var unmarshallingTypeMap = make(map[WebSocketMessageType]reflect.Type)
 var marshallingTypeMap = make(map[reflect.Type]WebSocketMessageType)
-
-func init() {
-	RegisterMessageType(WSMsgAuthenticationRequest, AuthenticationRequest{})
-	RegisterMessageType(WSMsgAuthenticationResponse, AuthenticationResponse{})
-	RegisterMessageType(WSMsgLogoutRequest, LogoutRequest{})
-	RegisterMessageType(WSMsgReauthenticationRequest, ReauthenticationRequest{})
-	RegisterMessageType(WSMsgError, Error{})
-}
 
 /*RegisterMessageType registers the type for both marshalling and unmarshalling.
 This function is NOT thread-safe and should be preferably called in the init()

@@ -2,6 +2,7 @@ package wsprotocol
 
 import (
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
+	"github.com/djarek/btrfs-volume-manager/common/request"
 	"github.com/gorilla/websocket"
 )
 
@@ -14,13 +15,13 @@ type Dialer struct {
 }
 
 //Dial connects to a websocket endpoint and creates a Connection
-func (d Dialer) Dial(url string, r Router) (*Connection, error) {
+func (d Dialer) Dial(url string, r Router) (*request.Context, error) {
 	wsConn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return nil, err
 	}
 	conn, recvChannel := newConnection(wsConn, d.m)
-	r.OnNewConnection(conn, recvChannel)
+	ctx := r.OnNewConnection(conn, recvChannel)
 	go conn.serve()
-	return conn, nil
+	return ctx, nil
 }

@@ -24,8 +24,10 @@ type BlockDevice struct {
 
 //StorageServer represents a Network Attached Storage device
 type StorageServer struct {
-	ID   StorageServerID
-	Name string
+	ID           StorageServerID `json:"id"`
+	Name         string          `json:"name"`
+	SlaveVersion string          `json:"slaveVersion"`
+	OSVersion    string          `json:"osVersion"`
 }
 
 //BtrfsVolume represents a filesystem volume which can potentially span over
