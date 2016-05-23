@@ -70,6 +70,13 @@ function($rootScope, $q, payloads) {
     this.payload = payloadObject;
   };
 
+  this.sendRaw = function(msg, requestID) {
+    var deferred = $q.defer();
+    sentRequests[msg.requestID] = deferred;
+    socket.send(msg);
+    return deferred.promise;
+  }
+
   function internalSend(payload, expectedResponse) {
     var deferred = $q.defer();
     var msg = new Message(payload);
@@ -126,7 +133,7 @@ angular.module('sbAdminApp')
   };
 
   this.isValid = function(msg, expected) {
-    return recvMessageTypes[msg.messageType] === expected;
+    return recvMessageTypes[msg.messageType] === expected || expected === "Any";
   }
 
   this.NewAuthenticationRequest = function(username, password) {
