@@ -12,6 +12,7 @@ import (
 	"github.com/djarek/btrfs-volume-manager/master/authentication"
 	"github.com/djarek/btrfs-volume-manager/master/db"
 	"github.com/djarek/btrfs-volume-manager/master/storageservers"
+	"github.com/djarek/btrfs-volume-manager/master/storageservers/blockdevices"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
 	"github.com/djarek/btrfs-volume-manager/common/router"
@@ -27,6 +28,8 @@ func setupAuth(r *router.Router) {
 func setupServerTracker(r *router.Router) {
 	tracker := storageservers.NewTracker()
 	serverController := storageservers.NewController(tracker)
+	blockDevController := blockdevices.NewController(tracker)
+	blockDevController.ExportHandlers(r)
 	serverController.ExportHandlers(r)
 }
 

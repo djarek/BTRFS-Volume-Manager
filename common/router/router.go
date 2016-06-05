@@ -45,7 +45,7 @@ func (r *Router) parsingLoop(ctx *request.Context, recvChannel <-chan dtos.WebSo
 	for msg := range recvChannel {
 		h, found := r.handlers[msg.MessageType]
 		if !found {
-			log.Printf("Unknown message type: %d\n", msg.MessageType)
+			log.Printf("[Router] Unknown message type: %d\n", msg.MessageType)
 			//TODO: Send error
 			continue
 		} else {

@@ -24,7 +24,8 @@
                         </thead>
                         <tbody>
                             <tr class="odd gradeX" ng-repeat="server in servers">
-                                <td>{{server.name}}</td>
+                                <td>
+                                    <a ui-sref="dashboard.storagedetails({id:server.id})"><i class="glyphicon glyphicon-hdd"></i>{{server.name}}</a></td>
                                 <td>{{server.slaveVersion}}</td>
                                 <td>{{server.osVersion}}</td>
                             </tr>

@@ -163,6 +163,20 @@ angular
          })
        }
      }
+   })
+   .state('dashboard.storagedetails', {
+     templateUrl: 'views/storage/serverstoragedetails.html',
+     url:'/storage/server/{id:int}/details/',
+     controller: 'ServerDetailsCtrl',
+     resolve: {
+       loadCtrl: function($ocLazyLoad) {
+         return $ocLazyLoad.load({
+           name:'sbAdminApp',
+           files:['scripts/controllers/serverdetails.js',
+           'scripts/services/storage.js']
+         })
+       }
+     }
    });
   }])
   .run(["$rootScope", "$state", "WebsocketService", "AuthenticationService",
@@ -176,7 +190,6 @@ angular
         $rootScope.toState = toState;
         $rootScope.toStateParams = toParams;
 
-        console.log(!authService.isAuthRequestSent());
         if (authService.hasSessionCookie() && !authService.isAuthRequestSent()) {
           authService.sendReloginRequest().then(function() {
             $state.transitionTo($rootScope.toState, $rootScope.toStateParams);

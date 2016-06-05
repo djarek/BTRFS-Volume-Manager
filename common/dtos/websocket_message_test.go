@@ -48,7 +48,10 @@ func TestWebsocketMessageMarshalling(t *testing.T) {
 	var msgTypeString = strconv.Itoa(WSMsgAuthenticationRequest)
 	var expectedJSON = "{\"messageType\":" + msgTypeString +
 		",\"requestID\":1,\"payload\":{\"username\":\"username\",\"password\":\"password\"}}"
-	msg := NewWebSocketMessage(1, &AuthenticationRequest{"username", "password"})
+	msg := NewWebSocketMessage(1, &AuthenticationRequest{
+		Username: "username",
+		Password: "password",
+	})
 
 	buf, err := json.Marshal(msg)
 	assert.Nil(t, err)

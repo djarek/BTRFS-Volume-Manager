@@ -43,7 +43,7 @@ func MountBtrfsRoot(vol dtos.BtrfsVolume) (rootMountPath string, err error) {
 		return "", errors.New(errStr + err.Error())
 	}
 
-	err = MountPointCache.RescanMountPoints()
+	err = MountPointCache.Rescan()
 	if err != nil {
 		return "", errors.New(errStr + err.Error())
 	}

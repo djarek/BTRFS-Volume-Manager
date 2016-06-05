@@ -130,6 +130,7 @@ angular.module('sbAdminApp')
     10000 : "Error",
     10001 : "AuthenticationResponse",
     10006 : "StorageServerListResponse",
+    10007 : "BlockDeviceListResponse"
   };
 
   this.isValid = function(msg, expected) {
@@ -157,9 +158,16 @@ angular.module('sbAdminApp')
     };
   }
 
-  this.NewStorageServerListRequest = function() {
+  this.NewStorageServerListRequest = function(serverID) {
     return {
+      serverID: serverID,
       getMessageType: function() { return 6; }
+    }
+  }
+
+  this.NewBlockDeviceListRequest = function() {
+    return {
+      getMessageType: function() { return 7; }
     }
   }
 })

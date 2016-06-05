@@ -14,12 +14,12 @@ type UUIDType string
 
 //BlockDevice represents a block device retrieved by blkid probe
 type BlockDevice struct {
-	ID       BlockDevID
-	VolID    VolumeID
-	ServerID StorageServerID
-	Path     string
-	UUID     UUIDType
-	Type     string
+	ID       BlockDevID      `json:"-"`
+	VolID    VolumeID        `json:"-"`
+	ServerID StorageServerID `json:"-"`
+	Path     string          `json:"path"`
+	UUID     UUIDType        `json:"UUID"`
+	Type     string          `json:"type"`
 }
 
 //StorageServer represents a Network Attached Storage device
