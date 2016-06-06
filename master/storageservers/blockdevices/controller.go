@@ -38,7 +38,6 @@ func (c *controller) onBlockDeviceListRequest(ctx *request.Context, msg dtos.Web
 	requestID, responseChannel := storageServCtx.NewRequest()
 	msg.RequestID = requestID
 	storageServCtx.SendAsync(msg)
-
 	go func() {
 		response, ok := <-responseChannel
 		if ok {

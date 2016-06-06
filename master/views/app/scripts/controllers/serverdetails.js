@@ -1,5 +1,5 @@
 angular.module("sbAdminApp")
-  .controller("ServerDetailsCtrl" ["$scope", "$stateParams", "StorageService",
+  .controller("ServerDetailsCtrl", ["$scope", "$stateParams", "StorageService",
   function($scope, $stateParams, StorageService) {
     StorageService.sendBlockDeviceListRequest($stateParams.id).then(function(msg) {
       $scope.blockDevices = msg.payload.blockDevices;
