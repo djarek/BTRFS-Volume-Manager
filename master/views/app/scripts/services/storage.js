@@ -11,4 +11,9 @@ angular.module("sbAdminApp")
       var req = WebsocketService.payloads.NewBlockDeviceListRequest(serverID);
       return WebsocketService.send(req, "BlockDeviceListResponse");
     }
+
+    this.sendBlockDeviceRescanRequest = function(serverID) {
+      var req = WebsocketService.payloads.NewBlockDeviceRescanRequest(serverID);
+      return WebsocketService.send(req, "BlockDeviceRescanResponse")
+    }
   }])
