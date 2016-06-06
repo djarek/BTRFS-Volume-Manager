@@ -8,7 +8,6 @@ angular.module("sbAdminApp")
     }
 
     this.sendBlockDeviceListRequest = function(serverID) {
-      console.log("lol");
       var req = WebsocketService.payloads.NewBlockDeviceListRequest(serverID);
       return WebsocketService.send(req, "BlockDeviceListResponse");
     }
