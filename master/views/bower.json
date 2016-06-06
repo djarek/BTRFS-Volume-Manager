@@ -26,7 +26,7 @@
   },
   "resolutions": {
     "bootstrap": "~3.1.1",
-    "angular": "1.5.3"
+    "angular": "1.5.x"
   },
   "appPath": "app"
 }

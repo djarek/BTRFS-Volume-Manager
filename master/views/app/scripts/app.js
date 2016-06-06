@@ -192,24 +192,26 @@ angular
 
         if (authService.hasSessionCookie() && !authService.isAuthRequestSent()) {
           authService.sendReloginRequest().then(function() {
+            event.preventDefault();
             $state.transitionTo($rootScope.toState, $rootScope.toStateParams);
           })
           .catch(function(err) {
             //TODO: show error message
+            event.preventDefault();
             $state.transitionTo("login");
           });
         } else {
+          event.preventDefault();
           $state.transitionTo("login");
+
         }
-        event.preventDefault();
       } else if (toState.name === "login") {
         if (authService.isAuthenticated()) {
           event.preventDefault();
         } else if (authService.hasSessionCookie()) {
-          $state.transitionTo("dashboard.home");
           event.preventDefault();
+          $state.transitionTo("dashboard.home");
         }
-
       }
     });
   }]);

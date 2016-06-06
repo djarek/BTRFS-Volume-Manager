@@ -129,6 +129,7 @@ angular.module('sbAdminApp')
   var recvMessageTypes = {
     10000 : "Error",
     10001 : "AuthenticationResponse",
+    10005 : "BlockDeviceRescanResponse",
     10006 : "StorageServerListResponse",
     10007 : "BlockDeviceListResponse"
   };
@@ -158,16 +159,23 @@ angular.module('sbAdminApp')
     };
   }
 
+  this.NewBlockDeviceRescanRequest = function(serverID) {
+    return {
+      serverID: serverID,
+      getMessageType: function() { return 5; }
+    };
+  }
+
   this.NewStorageServerListRequest = function(serverID) {
     return {
       serverID: serverID,
       getMessageType: function() { return 6; }
-    }
+    };
   }
 
   this.NewBlockDeviceListRequest = function() {
     return {
       getMessageType: function() { return 7; }
-    }
+    };
   }
 })
