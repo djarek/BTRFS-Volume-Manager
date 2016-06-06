@@ -36,8 +36,10 @@ func (c *controller) onServerRegistrationRequest(ctx *request.Context, msg dtos.
 	request := msg.Payload.(*dtos.StorageServerRegistrationRequest)
 	ID := c.tracker.RegisterServer(ctx)
 	details := storageServerDetails{
-		ID:   ID,
-		name: request.ServerName,
+		ID:           ID,
+		name:         request.ServerName,
+		slaveVersion: "0.0.1_placeholder", //TODO: replace placeholders
+		os:           "Ubuntu 16.04_placeholder",
 	}
 	ctx.SetSessionData(serverDetailsKey, details)
 	responsePayload := &dtos.StorageServerRegistrationResponse{
@@ -62,9 +64,9 @@ func (c *controller) onServerListRequest(ctx *request.Context, msg dtos.WebSocke
 		details := detailsInterface.(storageServerDetails)
 		serv := dtos.StorageServer{
 			ID:           details.ID,
-			Name:         details.name, //TODO: replace placeholders
-			SlaveVersion: "0.0.1_placeholder",
-			OSVersion:    "Ubuntu 16.04_placeholder",
+			Name:         details.name,
+			SlaveVersion: details.slaveVersion,
+			OSVersion:    details.os,
 		}
 		storageServers = append(storageServers, serv)
 	}

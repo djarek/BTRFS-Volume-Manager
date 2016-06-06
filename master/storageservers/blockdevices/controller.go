@@ -21,6 +21,31 @@ func NewController(tracker storageservers.Tracker) router.HandlerExporter {
 func (c *controller) ExportHandlers(adder router.HandlerAdder) {
 	adder.AddHandler(dtos.WSMsgBlockDeviceRescanRequest, c.onBlockDeviceRescanRequest)
 	adder.AddHandler(dtos.WSMsgBlockDeviceRescanResponse, router.DefaultResponseHandler)
+
+	adder.AddHandler(dtos.WSMsgBlockDeviceListRequest, c.onBlockDeviceListRequest)
+	adder.AddHandler(dtos.WSMsgBlockDeviceListResponse, router.DefaultResponseHandler)
+}
+
+func (c *controller) onBlockDeviceListRequest(ctx *request.Context, msg dtos.WebSocketMessage) {
+	blockDevListRequest := msg.Payload.(*dtos.BlockDeviceListRequest)
+	storageServCtx, ok := c.serverTracker.GetServerContext(blockDevListRequest.ServerID)
+	if !ok {
+		//TODO: unknown storage server, send error
+		return
+	}
+
+	clientRequestID := msg.RequestID
+	requestID, responseChannel := storageServCtx.NewRequest()
+	msg.RequestID = requestID
+	storageServCtx.SendAsync(msg)
+
+	go func() {
+		response, ok := <-responseChannel
+		if ok {
+			response.RequestID = clientRequestID
+			ctx.SendAsync(response)
+		}
+	}()
 }
 
 func (c *controller) onBlockDeviceRescanRequest(ctx *request.Context, msg dtos.WebSocketMessage) {

@@ -19,6 +19,7 @@ const (
 	WSMsgStorageServerRegistrationRequest = 4
 	WSMsgBlockDeviceRescanRequest         = 5
 	WSMsgStorageServerListRequest         = 6
+	WSMsgBlockDeviceListRequest           = 7
 )
 
 //WSMsgResponse MessageType values
@@ -28,6 +29,7 @@ const (
 	WSMsgStorageServerRegistrationResponse = 10004
 	WSMsgBlockDeviceRescanResponse         = 10005
 	WSMsgStorageServerListResponse         = 10006
+	WSMsgBlockDeviceListResponse           = 10007
 )
 
 func init() {
@@ -44,6 +46,9 @@ func init() {
 
 	RegisterMessageType(WSMsgStorageServerListRequest, StorageServerListRequest{})
 	RegisterMessageType(WSMsgStorageServerListResponse, StorageServerListResponse{})
+
+	RegisterMessageType(WSMsgBlockDeviceListRequest, BlockDeviceListRequest{})
+	RegisterMessageType(WSMsgBlockDeviceListResponse, BlockDeviceListResponse{})
 
 	RegisterMessageType(WSMsgError, Error{})
 }
@@ -84,92 +89,102 @@ func (JSONMessageMarshaller) Unmarshal(buf []byte) (msg WebSocketMessage, err er
 	return
 }
 
+//BasePayload should be embedded into structs that are supposed to be sent as
+//payloads.
+type BasePayload struct{}
+
+func (*BasePayload) isPayload() {}
+
 //AuthenticationRequest represents a request from the client to perform authentication
 type AuthenticationRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	BasePayload `json:"-"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
 }
-
-func (*AuthenticationRequest) isPayload() {}
 
 /*AuthenticationResponse represents a response to the client indicating whether
 authentication succeeded or failed*/
 type AuthenticationResponse struct {
+	BasePayload `json:"-"`
 	Result      string `json:"result"`
 	UserDetails string `json:"userDetails"`
 }
 
-func (*AuthenticationResponse) isPayload() {}
-
 /*LogoutRequest represents a request from the client to end the session*/
-type LogoutRequest struct{}
-
-func (*LogoutRequest) isPayload() {}
+type LogoutRequest struct {
+	BasePayload `json:"-"`
+}
 
 /*ReauthenticationRequest represents a request from the client to reuse a previous
 session.*/
 type ReauthenticationRequest struct {
-	Token string `json:"token"`
+	BasePayload `json:"-"`
+	Token       string `json:"token"`
 }
-
-func (*ReauthenticationRequest) isPayload() {}
 
 /*StorageServerRegistrationRequest represents a request from a storage server to
 register it in the server tracker*/
 type StorageServerRegistrationRequest struct {
-	ServerName string `json:"serverName"`
+	BasePayload `json:"-"`
+	ServerName  string `json:"serverName"`
 }
-
-func (*StorageServerRegistrationRequest) isPayload() {}
 
 /*StorageServerRegistrationResponse represents a request from a storage server to
 register it in the server tracker*/
 type StorageServerRegistrationResponse struct {
-	AssignedID StorageServerID `json:"assignedID"`
+	BasePayload `json:"-"`
+	AssignedID  StorageServerID `json:"assignedID"`
 }
-
-func (*StorageServerRegistrationResponse) isPayload() {}
 
 /*BlockDeviceRescanRequest represents a request to the slave to perform a scan
 of block devices in the system*/
 type BlockDeviceRescanRequest struct {
-	ServerID StorageServerID `json:"serverID"`
+	BasePayload `json:"-"`
+	ServerID    StorageServerID `json:"serverID"`
 }
-
-func (*BlockDeviceRescanRequest) isPayload() {}
 
 /*BlockDeviceRescanResponse represents a response from the slave containing  a list
 of all block devices present in the system*/
 type BlockDeviceRescanResponse struct {
+	BasePayload  `json:"-"`
 	BlockDevices []BlockDevice `json:"blockDevices"`
 }
-
-func (*BlockDeviceRescanResponse) isPayload() {}
 
 /*StorageServerListRequest represents a request from the client to retrieve a list of
 all storage servers.*/
 type StorageServerListRequest struct {
+	BasePayload `json:"-"`
 }
-
-func (*StorageServerListRequest) isPayload() {}
 
 /*StorageServerListResponse represents a response to the client with the list of
 all storage servers.*/
 type StorageServerListResponse struct {
-	Servers []StorageServer `json:"servers"`
+	BasePayload `json:"-"`
+	Servers     []StorageServer `json:"servers"`
 }
 
-func (*StorageServerListResponse) isPayload() {}
+/*BlockDeviceListRequest represents a request from the client to retrieve a list of
+all block devices present on the slave.*/
+type BlockDeviceListRequest struct {
+	BasePayload `json:"-"`
+	ServerID    StorageServerID `json:"serverID"`
+}
+
+/*BlockDeviceListResponse represents a response to the client with the list of all
+block devices present on the slave*/
+type BlockDeviceListResponse struct {
+	BasePayload  `json:"-"`
+	BlockDevices []BlockDevice `json:"blockDevices"`
+}
 
 /*Error represents an error that occured in the higher layers and is supposed
 to be sent to the client. The subsystem string indicates which entity emitted
 the error.*/
 type Error struct {
-	Subsystem string `json:"subsystem"`
-	Details   string `json:"details"`
+	BasePayload `json:"-"`
+	Subsystem   string `json:"subsystem"`
+	Details     string `json:"details"`
 }
-
-func (*Error) isPayload() {}
 
 func (e Error) Error() string {
 	return e.Subsystem + " error: " + e.Details

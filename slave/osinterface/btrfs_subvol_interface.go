@@ -109,3 +109,18 @@ func DeleteSubVolume(vol dtos.BtrfsVolume, subvolRelativePath string) error {
 	}
 	return nil
 }
+
+/*CreateSnapshot attempts to create a snapshot of a subvolume at the specified
+path (relative to the volume root). If the volume's root is not mounted this
+function returns an error.*/
+func CreateSnapshot(subvol dtos.BtrfsSubVolume, snapshotRelativePath string) error {
+	mountPath, err := getBtrfsRootMount(dtos.BtrfsVolume{UUID: subvol.VolumeUUID})
+	if err != nil {
+		return err
+	}
+
+	path := filepath.Join(mountPath, snapshotRelativePath)
+	sourcePath := filepath.Join(mountPath, subvol.RelativePath)
+	_, err = runBtrfsCommand("subvolume", "snapshot", sourcePath, path)
+	return err
+}

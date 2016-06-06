@@ -42,11 +42,11 @@ func (mpc *mountPointCache) FindRootMount(UUID dtos.UUIDType) (*dtos.MountPoint,
 	return mountPoint, ok
 }
 
-/*RescanMountPoints performs a scan for all present mount points. If the scan fails,
+/*Rescan performs a scan for all present mount points. If the scan fails,
 an appropriate error is returned and the cache is not modified. This function is
 thread-safe.
 */
-func (mpc *mountPointCache) RescanMountPoints() (err error) {
+func (mpc *mountPointCache) Rescan() (err error) {
 	mountPoints, err := probeMountPoints()
 	if err != nil {
 		return
@@ -99,11 +99,11 @@ type blockDeviceCache struct {
 	blockDevs         []dtos.BlockDevice
 }
 
-/*RescanBlockDevs performs a scan for all present block devices. If the scan fails,
+/*Rescan performs a scan for all present block devices. If the scan fails,
 an appropriate error is returned and the cache is not modified. This function is
 thread-safe.
 */
-func (bdc *blockDeviceCache) RescanBlockDevs() (err error) {
+func (bdc *blockDeviceCache) Rescan() (err error) {
 	blockDevs, err := probeBlockDevices()
 	if err != nil {
 		return
@@ -145,4 +145,15 @@ func (bdc *blockDeviceCache) FindByUUID(UUID dtos.UUIDType) ([]*dtos.BlockDevice
 	defer bdc.mtx.RUnlock()
 	bd, ok := bdc.blockDevsByUUID[UUID]
 	return bd, ok
+}
+
+/*GetAll returns the cached list of all present block devices.*/
+func (bdc *blockDeviceCache) GetAll() []dtos.BlockDevice {
+	bdc.mtx.RLock()
+	defer bdc.mtx.RUnlock()
+	var ret []dtos.BlockDevice
+	for _, blockDev := range bdc.blockDevs {
+		ret = append(ret, blockDev)
+	}
+	return ret
 }
