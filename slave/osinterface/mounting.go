@@ -2,6 +2,7 @@ package osinterface
 
 import (
 	"errors"
+	"os"
 	"syscall"
 
 	"github.com/djarek/btrfs-volume-manager/common/dtos"
@@ -11,7 +12,7 @@ var mount = func(source string, target string, fstype string, flags uintptr, dat
 	return syscall.Mount(source, target, fstype, flags, data)
 }
 
-func getBtrfsRootMount(vol dtos.BtrfsVolume) (mountPath string, err error) {
+func GetBtrfsRootMount(vol dtos.BtrfsVolume) (mountPath string, err error) {
 	mount, ok := MountPointCache.FindRootMount(vol.UUID)
 	if !ok {
 		mountPath, err = MountBtrfsRoot(vol)
@@ -29,6 +30,11 @@ configured path.*/
 func MountBtrfsRoot(vol dtos.BtrfsVolume) (rootMountPath string, err error) {
 	const errStr = "BTRFS root mount failed: "
 	targetPath := rootMountsPath + "/" + string(vol.UUID)
+	err = os.MkdirAll(targetPath, 0777)
+	if err != nil {
+		return
+	}
+
 	bds, ok := BlockDeviceCache.FindByUUID(vol.UUID)
 	if !ok || len(bds) == 0 {
 		return "", errors.New(errStr + "no device present for volume UUID: " + string(vol.UUID))

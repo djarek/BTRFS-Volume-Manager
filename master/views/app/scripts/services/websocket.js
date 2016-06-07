@@ -131,7 +131,12 @@ angular.module('sbAdminApp')
     10001 : "AuthenticationResponse",
     10005 : "BlockDeviceRescanResponse",
     10006 : "StorageServerListResponse",
-    10007 : "BlockDeviceListResponse"
+    10007 : "BlockDeviceListResponse",
+    10008 : "BtrfsVolumeListResponse",
+    10009 : "BtrfsSubvolumeListResponse",
+    10010 : "BtrfsSubvolumeCreateResponse",
+    10011 : "BtrfsSubvolumeDeleteResponse",
+    10012 : "BtrfsSubvolumeSnapshotResponse",
   };
 
   this.isValid = function(msg, expected) {
@@ -149,33 +154,77 @@ angular.module('sbAdminApp')
   this.NewLogoutRequest = function() {
     return {
       getMessageType: function() { return 2; }
-    }
-  }
+    };
+  };
 
   this.NewReauthenticatonRequest = function(token) {
     return {
       token: token,
       getMessageType: function() { return 3; }
     };
-  }
+  };
 
   this.NewBlockDeviceRescanRequest = function(serverID) {
     return {
       serverID: serverID,
       getMessageType: function() { return 5; }
     };
-  }
+  };
 
   this.NewStorageServerListRequest = function(serverID) {
     return {
       serverID: serverID,
       getMessageType: function() { return 6; }
     };
-  }
+  };
 
-  this.NewBlockDeviceListRequest = function() {
+  this.NewBlockDeviceListRequest = function(serverID) {
     return {
+      serverID: serverID,
       getMessageType: function() { return 7; }
     };
-  }
+  };
+
+  this.NewBtrfsVolumeListRequest = function(serverID) {
+    return {
+      serverID: serverID,
+      getMessageType: function() { return 8; }
+    };
+  };
+
+  this.NewBtrfsSubvolumeListRequest = function(serverID, volumeUUID) {
+    return {
+      serverID: serverID,
+      volumeUUID: volumeUUID,
+      getMessageType: function() { return 9; }
+    };
+  };
+
+  this.NewBtrfsSubvolumeCreateRequest = function(serverID, volumeUUID, relativePath) {
+    return {
+      serverID: serverID,
+      volumeUUID: volumeUUID,
+      relativePath: relativePath,
+      getMessageType: function() { return 10; }
+    };
+  };
+
+  this.NewBtrfsSubvolumeDeleteRequest = function(serverID, volumeUUID, relativePath) {
+    return {
+      serverID: serverID,
+      volumeUUID: volumeUUID,
+      relativePath: relativePath,
+      getMessageType: function() { return 11; }
+    };
+  };
+
+  this.NewBtrfsSubvolumeSnapshotRequest = function(serverID, volumeUUID, relativePath, targetPath) {
+    return {
+      serverID: serverID,
+      volumeUUID: volumeUUID,
+      relativePath: relativePath,
+      targetPath: targetPath,
+      getMessageType: function() { return 12; }
+    };
+  };
 })
