@@ -34,11 +34,11 @@ There are several projects on market which are providing tools for managing BTRF
   - Lack of enough time
 
 ## Techniques & Technologies used to implement your project
-  - Go - backend programming language
-  - HTML - client-side markup language
-  - AngularJS - client-side web application language
-  - C - low-level communication with the Linux kernel)
-  - MongoDB - NoSQL database
+  - [Go](https://golang.org/doc/) - backend programming language
+  - [HTML](http://devdocs.io/html/) - client-side markup language
+  - [AngularJS](https://docs.angularjs.org/api) - client-side web application language
+  - [C](http://en.cppreference.com/w/c) - low-level communication with the Linux kernel)
+  - [MongoDB](https://docs.mongodb.com/) - NoSQL database
 
 ## Milestones & Project plan
 #### Gantt Chart
