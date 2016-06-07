@@ -9,6 +9,7 @@ import (
 
 	"github.com/djarek/btrfs-volume-manager/common/router"
 	"github.com/djarek/btrfs-volume-manager/common/wsprotocol"
+	"github.com/djarek/btrfs-volume-manager/slave/osinterface"
 )
 
 const (
@@ -22,6 +23,7 @@ func main() {
 	r := router.New()
 	auth := &authController{}
 	auth.ExportHandlers(r)
+	osinterface.BlockDeviceCache.Rescan()
 	bdCtrl := blockDevController{}
 	bdCtrl.ExportHandlers(r)
 	ctx, err := wsprotocol.DefaultDialer.Dial(masterControlURL, r)

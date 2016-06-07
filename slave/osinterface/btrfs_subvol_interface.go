@@ -76,7 +76,7 @@ func ProbeSubVolumes(mountPath string) (subvols []dtos.BtrfsSubVolume, err error
 }
 
 func runBtrfsSubvolumeCommand(vol dtos.BtrfsVolume, subvolRelativePath string, subCommand string) error {
-	mountPath, err := getBtrfsRootMount(vol)
+	mountPath, err := GetBtrfsRootMount(vol)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func DeleteSubVolume(vol dtos.BtrfsVolume, subvolRelativePath string) error {
 path (relative to the volume root). If the volume's root is not mounted this
 function returns an error.*/
 func CreateSnapshot(subvol dtos.BtrfsSubVolume, snapshotRelativePath string) error {
-	mountPath, err := getBtrfsRootMount(dtos.BtrfsVolume{UUID: subvol.VolumeUUID})
+	mountPath, err := GetBtrfsRootMount(dtos.BtrfsVolume{UUID: subvol.VolumeUUID})
 	if err != nil {
 		return err
 	}

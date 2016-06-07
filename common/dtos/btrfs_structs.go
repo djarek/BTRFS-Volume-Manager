@@ -33,11 +33,11 @@ type StorageServer struct {
 //BtrfsVolume represents a filesystem volume which can potentially span over
 //multiple devices
 type BtrfsVolume struct {
-	ID       VolumeID
-	ServerID StorageServerID
-	UUID     UUIDType
-	Label    string
-	Devices  []*BlockDevice
+	ID       VolumeID        `json:"-"`
+	ServerID StorageServerID `json:"-"`
+	UUID     UUIDType        `json:"UUID"`
+	Label    string          `json:"label"`
+	Devices  []*BlockDevice  `json:"devices"`
 }
 
 //MountPoint describes a filesystem mount directory and options
@@ -53,7 +53,7 @@ type MountPoint struct {
 //BtrfsSubVolume represents a subvolume on a btrfs volume
 type BtrfsSubVolume struct {
 	SubVolID     int
-	RelativePath string
+	RelativePath string `json:"relativePath"`
 	VolumeUUID   UUIDType
 	ParentUUID   UUIDType
 }

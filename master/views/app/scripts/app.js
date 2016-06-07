@@ -177,6 +177,20 @@ angular
          })
        }
      }
+   })
+   .state('dashboard.volumedetails', {
+     templateUrl: 'views/storage/volumedetails.html',
+     url:'/storage/server/{id:int}/volume/{volid}/details/',
+     controller: 'VolumeDetailsCtrl',
+     resolve: {
+       loadCtrl: function($ocLazyLoad) {
+         return $ocLazyLoad.load({
+           name:'sbAdminApp',
+           files:['scripts/controllers/volumedetails.js',
+           'scripts/services/storage.js']
+         })
+       }
+     }
    });
   }])
   .run(["$rootScope", "$state", "WebsocketService", "AuthenticationService",

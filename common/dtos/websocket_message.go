@@ -20,6 +20,11 @@ const (
 	WSMsgBlockDeviceRescanRequest         = 5
 	WSMsgStorageServerListRequest         = 6
 	WSMsgBlockDeviceListRequest           = 7
+	WSMsgBtrfsVolumeListRequest           = 8
+	WSMsgBtrfsSubvolumeListRequest        = 9
+	WSMsgBtrfsSubvolumeCreateRequest      = 10
+	WSMsgBtrfsSubvolumeDeleteRequest      = 11
+	WSMsgBtrfsSubvolumeSnapshotRequest    = 12
 )
 
 //WSMsgResponse MessageType values
@@ -30,6 +35,11 @@ const (
 	WSMsgBlockDeviceRescanResponse         = 10005
 	WSMsgStorageServerListResponse         = 10006
 	WSMsgBlockDeviceListResponse           = 10007
+	WSMsgBtrfsVolumeListResponse           = 10008
+	WSMsgBtrfsSubvolumeListResponse        = 10009
+	WSMsgBtrfsSubvolumeCreateResponse      = 10010
+	WSMsgBtrfsSubvolumeDeleteResponse      = 10011
+	WSMsgBtrfsSubvolumeSnapshotResponse    = 10012
 )
 
 func init() {
@@ -49,6 +59,21 @@ func init() {
 
 	RegisterMessageType(WSMsgBlockDeviceListRequest, BlockDeviceListRequest{})
 	RegisterMessageType(WSMsgBlockDeviceListResponse, BlockDeviceListResponse{})
+
+	RegisterMessageType(WSMsgBtrfsVolumeListRequest, BtrfsVolumeListRequest{})
+	RegisterMessageType(WSMsgBtrfsVolumeListResponse, BtrfsVolumeListResponse{})
+
+	RegisterMessageType(WSMsgBtrfsSubvolumeListRequest, BtrfsSubvolumeListRequest{})
+	RegisterMessageType(WSMsgBtrfsSubvolumeListResponse, BtrfsSubvolumeListResponse{})
+
+	RegisterMessageType(WSMsgBtrfsSubvolumeCreateRequest, BtrfsSubvolumeCreateRequest{})
+	RegisterMessageType(WSMsgBtrfsSubvolumeCreateResponse, BtrfsSubvolumeCreateResponse{})
+
+	RegisterMessageType(WSMsgBtrfsSubvolumeDeleteRequest, BtrfsSubvolumeDeleteRequest{})
+	RegisterMessageType(WSMsgBtrfsSubvolumeDeleteResponse, BtrfsSubvolumeDeleteResponse{})
+
+	RegisterMessageType(WSMsgBtrfsSubvolumeSnapshotRequest, BtrfsSubvolumeSnapshotRequest{})
+	RegisterMessageType(WSMsgBtrfsSubvolumeSnapshotResponse, BtrfsSubvolumeSnapshotResponse{})
 
 	RegisterMessageType(WSMsgError, Error{})
 }
@@ -175,6 +200,85 @@ block devices present on the slave*/
 type BlockDeviceListResponse struct {
 	BasePayload  `json:"-"`
 	BlockDevices []BlockDevice `json:"blockDevices"`
+}
+
+/*BtrfsVolumeListRequest represents a request from the client to retrieve a list of
+all btrfs volumes present on the slave.*/
+type BtrfsVolumeListRequest struct {
+	BasePayload `json:"-"`
+	ServerID    StorageServerID `json:"serverID"`
+}
+
+/*BtrfsVolumeListResponse represents a response to the client with the list of all
+btrfs volumes present on the slave*/
+type BtrfsVolumeListResponse struct {
+	BasePayload  `json:"-"`
+	BtrfsVolumes []BtrfsVolume `json:"btrfsVolumes"`
+}
+
+/*BtrfsSubvolumeListRequest represents a request from the client to retrieve a list
+of all subvolumes for a given volume.*/
+type BtrfsSubvolumeListRequest struct {
+	BasePayload
+	ServerID   StorageServerID `json:"serverID"`
+	VolumeUUID UUIDType        `json:"volumeUUID"`
+}
+
+/*BtrfsSubvolumeListResponse represents a response to the client with the list of
+all btrfs subvolumes for a given volume.*/
+type BtrfsSubvolumeListResponse struct {
+	BasePayload
+	Subvolumes []BtrfsSubVolume `json:"subvolumes"`
+}
+
+type IDContainer struct {
+	ServerID StorageServerID `json:"serverID"`
+}
+
+func (i *IDContainer) getServerID() StorageServerID {
+	return i.ServerID
+}
+
+type VolumeUUIDContainer struct {
+	VolumeUUID UUIDType `json:"volumeUUID"`
+}
+
+func (v *VolumeUUIDContainer) getVolumeUUID() UUIDType {
+	return v.VolumeUUID
+}
+
+type BtrfsSubvolumeCreateRequest struct {
+	BasePayload
+	IDContainer
+	VolumeUUIDContainer
+	RelativePath string
+}
+
+type BtrfsSubvolumeCreateResponse struct {
+	BasePayload
+}
+
+type BtrfsSubvolumeDeleteRequest struct {
+	BasePayload
+	IDContainer
+	VolumeUUIDContainer
+	RelativePath string
+}
+
+type BtrfsSubvolumeDeleteResponse struct {
+	BasePayload
+}
+
+type BtrfsSubvolumeSnapshotRequest struct {
+	BasePayload
+	IDContainer
+	VolumeUUIDContainer
+	RelativePath string
+	TargetPath   string
+}
+
+type BtrfsSubvolumeSnapshotResponse struct {
+	BasePayload
 }
 
 /*Error represents an error that occured in the higher layers and is supposed

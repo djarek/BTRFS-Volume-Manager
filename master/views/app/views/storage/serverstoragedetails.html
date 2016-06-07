@@ -46,7 +46,10 @@
     <div class="col-lg-6">
         <div class="panel panel-default">
             <div class="panel-heading">
-                Hover Rows
+                BTRFS Volumes
+                <button type="button" ng-click="rescanBtrfsVolumes()" class="btn btn-primary btn-sm"><span class="glyphicon glyphicon-refresh"></span>
+                  Rescan
+                </button>
             </div>
             <!-- /.panel-heading -->
             <div class="panel-body">
@@ -55,30 +58,29 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Username</th>
+                                <th>UUID</th>
+                                <th>Label</th>
+                                <th>Devices</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td>1</td>
-                                <td>Mark</td>
-                                <td>Otto</td>
-                                <td>@mdo</td>
+                            <tr ng-repeat="btrfsVolume in btrfsVolumes">
+                                <td>{{$index}}</td>
+                                <td>
+                                  <a ui-sref="dashboard.volumedetails({id:serverid,volid:btrfsVolume.UUID})">
+                                    {{btrfsVolume.UUID}}
+                                  </a>
+                                </td>
+                                <td>{{btrfsVolume.label}}</td>
+                                <td>
+                                  <ul>
+                                    <li ng-repeat="device in btrfsVolume.devices">
+                                      {{device.path}}
+                                    </li>
+                                  </ul>
+                                </td>
                             </tr>
-                            <tr>
-                                <td>2</td>
-                                <td>Jacob</td>
-                                <td>Thornton</td>
-                                <td>@fat</td>
-                            </tr>
-                            <tr>
-                                <td>3</td>
-                                <td>Larry</td>
-                                <td>the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
+
                         </tbody>
                     </table>
                 </div>
