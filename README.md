@@ -58,6 +58,8 @@ There are several projects on market which are providing tools for managing BTRF
 ## Thorough Implementation description along with deployment information
 #### Steps to install
 
-#### Hardware & Software requirements
-
+#### Software requirements
+  - Go >1.5
+  - AngularJS 1.5.x
+  - MongoDB 3.2
 ## Conclusions
