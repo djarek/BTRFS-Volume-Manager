@@ -57,7 +57,7 @@ There are several projects on market which are providing tools for managing BTRF
 
 ## Thorough Implementation description along with deployment information
 #### Steps to install
-
+[Building the project](https://github.com/djarek/btrfs-volume-manager/wiki/Building-the-project)
 #### Software requirements
   - Go >1.5
   - AngularJS 1.5.x
